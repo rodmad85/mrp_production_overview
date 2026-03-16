@@ -29,7 +29,7 @@ class MrpRealCostReport(models.Model):
             mp.id as production_id,
             mp.product_id as product_id,
 
-            'component' as cost_type,
+            'Componente' as cost_type,
 
             pt.name->>'pt_BR' as item_name,
 
@@ -65,7 +65,7 @@ class MrpRealCostReport(models.Model):
             mp.id as production_id,
             mp.product_id as product_id,
 
-            'labor' as cost_type,
+            'Serviço' as cost_type,
 
             wc.name as item_name,
 
