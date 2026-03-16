@@ -1,46 +1,28 @@
 <odoo>
 
-    <record id="view_mrp_real_cost_tree" model="ir.ui.view">
-        <field name="name">mrp.real.cost.tree</field>
-        <field name="model">mrp.real.cost.report</field>
-        <field name="arch" type="xml">
+<record id="view_mrp_real_cost_tree" model="ir.ui.view">
+    <field name="name">mrp.real.cost.tree</field>
+    <field name="model">mrp.real.cost.report</field>
 
-            <tree string="Custos Produção">
+    <field name="arch" type="xml">
 
-                <field name="product_id"/>
+        <tree string="Custos Produção">
 
-                <field name="production_id"/>
+            <field name="product_id"/>
+            <field name="production_id"/>
 
-                <field name="cost_type"/>
+            <field name="cost_type"/>
+            <field name="item_name"/>
 
-                <field name="item_name"/>
+            <field name="quantity"/>
 
-                <field name="quantity"/>
+            <field name="planned_cost" sum="Planejado"/>
+            <field name="real_cost" sum="Real"/>
+            <field name="variance_cost" sum="Variação"/>
 
-                <field name="planned_cost" sum="Planejado"/>
+        </tree>
 
-                <field name="real_cost" sum="Real"/>
-
-                <field name="variance_cost" sum="Variação"/>
-
-            </tree>
-        </field>
-    </record>
-
-    <record id="view_mrp_real_cost_pivot" model="ir.ui.view">
-        <field name="name">mrp.real.cost.pivot</field>
-        <field name="model">mrp.real.cost.report</field>
-        <field name="arch" type="xml">
-            <pivot>
-
-                <field name="production_id" type="row"/>
-                <field name="product_id" type="row"/>
-                <field name="cost_type" type="row"/>
-                <field name="item_name" type="row"/>
-                <field name="real_cost" type="measure"/>
-
-            </pivot>
-        </field>
-    </record>
+    </field>
+</record>
 
 </odoo>

@@ -6,41 +6,16 @@
 
 <main>
 
-<t t-foreach="docs" t-as="o">
-<t t-set="currency" t-value="o.company_id.currency_id"/>
-
 <h2>Relatório de Custos de Produção</h2>
 
-<p>
-Ordem:
-<strong><span t-field="o.name"/></strong>
-</p>
-
-<p>
-Produto:
-<strong><span t-field="o.product_id.display_name"/></strong>
-</p>
-
-<p>
-Quantidade Produzida:
-<strong><span t-field="o.product_qty"/></strong>
-</p>
-
 <t t-set="lines"
-   t-value="env['mrp.real.cost.report'].search([('production_id','=',o.id)])"/>
-
-<t t-set="components"
-   t-value="lines.filtered(lambda l: l.cost_type == 'component')"/>
-
-<t t-set="operations"
-   t-value="lines.filtered(lambda l: l.cost_type == 'operation')"/>
-
-<h3>Componentes</h3>
+   t-value="env['mrp.real.cost.report'].search([('production_id','=',doc.id)])"/>
 
 <table class="table table-sm">
 
 <thead>
 <tr>
+<th>Tipo</th>
 <th>Item</th>
 <th>Qtd</th>
 <th>Planejado</th>
@@ -51,15 +26,21 @@ Quantidade Produzida:
 
 <tbody>
 
-<t t-foreach="components" t-as="line">
+<t t-foreach="lines" t-as="l">
 
 <tr>
 
-<td><span t-esc="line.item_name"/></td>
-<td><span t-field="line.quantity"/></td>
-<td><span t-field="line.planned_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
-<td><span t-field="line.real_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
-<td><span t-field="line.variance_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
+<td><span t-field="l.cost_type"/></td>
+
+<td><span t-esc="l.item_name"/></td>
+
+<td><span t-field="l.quantity"/></td>
+
+<td><span t-field="l.planned_cost"/></td>
+
+<td><span t-field="l.real_cost"/></td>
+
+<td><span t-field="l.variance_cost"/></td>
 
 </tr>
 
@@ -68,124 +49,11 @@ Quantidade Produzida:
 </tbody>
 
 </table>
-
-<t t-set="comp_plan" t-value="sum(l.planned_cost for l in components)"/>
-<t t-set="comp_real" t-value="sum(l.real_cost for l in components)"/>
-<t t-set="comp_var" t-value="sum(l.variance_cost for l in components)"/>
-
-<p>
-<strong>Subtotal Componentes</strong><br/>
-Planejado: <span t-esc="comp_plan" t-options="{'widget': 'monetary', 'display_currency': currency}"/><br/>
-Real: <span t-esc="comp_real" t-options="{'widget': 'monetary', 'display_currency': currency}"/><br/>
-Variação: <span t-esc="comp_var" t-options="{'widget': 'monetary', 'display_currency': currency}"/>
-</p>
-
-<h3>Mão de Obra / Operações</h3>
-
-<table class="table table-sm">
-
-<thead>
-<tr>
-<th>Operação</th>
-<th>Tempo</th>
-<th>Planejado</th>
-<th>Real</th>
-<th>Variação</th>
-</tr>
-</thead>
-
-<tbody>
-
-<t t-foreach="operations" t-as="line">
-
-<tr>
-
-<td><span t-esc="line.item_name.get(o.env.lang) or line.item_name.get('en_US')"/></td>
-<td><span t-field="line.quantity"/></td>
-<td><span t-field="line.planned_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
-<td><span t-field="line.real_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
-<td><span t-field="line.variance_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
-
-</tr>
-
-</t>
-
-</tbody>
-
-</table>
-
-<t t-set="op_plan" t-value="sum(l.planned_cost for l in operations)"/>
-<t t-set="op_real" t-value="sum(l.real_cost for l in operations)"/>
-<t t-set="op_var" t-value="sum(l.variance_cost for l in operations)"/>
-
-<p>
-<strong>Subtotal Mão de Obra</strong><br/>
-Planejado: <span t-esc="op_plan"/><br/>
-Real: <span t-esc="op_real"/><br/>
-Variação: <span t-esc="op_var"/>
-</p>
-
-<t t-set="total_plan" t-value="comp_plan + op_plan"/>
-<t t-set="total_real" t-value="comp_real + op_real"/>
-<t t-set="total_var" t-value="comp_var + op_var"/>
-
-<h3>Totais</h3>
-
-<table class="table table-sm">
-
-<tr>
-<td><strong>Total Planejado</strong></td>
-<td><span t-esc="total_plan" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
-</tr>
-
-<tr>
-<td><strong>Total Real</strong></td>
-<td><span t-esc="total_real" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
-</tr>
-
-<tr>
-<td><strong>Variação</strong></td>
-<td><span t-esc="total_var" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
-</tr>
-
-</table>
-
-<t t-if="o.product_qty">
-
-<h3>Custo por Unidade Produzida</h3>
-
-<table class="table table-sm">
-
-<tr>
-<td><strong>Custo Planejado / Unidade</strong></td>
-<td><span t-esc="total_plan / o.product_qty" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
-</tr>
-
-<tr>
-<td><strong>Custo Real / Unidade</strong></td>
-<td><span t-esc="total_real / o.product_qty" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
-</tr>
-
-</table>
-
-</t>
-
-</t>
 
 </main>
 
 </t>
 
 </template>
-
-<record id="action_report_mrp_real_cost" model="ir.actions.report">
-
-<field name="name">Custos de Produção</field>
-<field name="model">mrp.production</field>
-<field name="report_type">qweb-pdf</field>
-<field name="report_name">mrp_real_cost.report_mrp_real_cost</field>
-<field name="report_file">mrp_real_cost.report_mrp_real_cost</field>
-
-</record>
 
 </odoo>
