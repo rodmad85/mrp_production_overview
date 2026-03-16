@@ -7,6 +7,7 @@
 <main>
 
 <t t-foreach="docs" t-as="o">
+<t t-set="currency" t-value="o.company_id.currency_id"/>
 
 <h2>Relatório de Custos de Produção</h2>
 
@@ -56,9 +57,9 @@ Quantidade Produzida:
 
 <td><span t-esc="line.item_name"/></td>
 <td><span t-field="line.quantity"/></td>
-<td><span t-field="line.planned_cost"/></td>
-<td><span t-field="line.real_cost"/></td>
-<td><span t-field="line.variance_cost"/></td>
+<td><span t-field="line.planned_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
+<td><span t-field="line.real_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
+<td><span t-field="line.variance_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
 
 </tr>
 
@@ -74,9 +75,9 @@ Quantidade Produzida:
 
 <p>
 <strong>Subtotal Componentes</strong><br/>
-Planejado: <span t-esc="comp_plan"/><br/>
-Real: <span t-esc="comp_real"/><br/>
-Variação: <span t-esc="comp_var"/>
+Planejado: <span t-esc="comp_plan" t-options="{'widget': 'monetary', 'display_currency': currency}"/><br/>
+Real: <span t-esc="comp_real" t-options="{'widget': 'monetary', 'display_currency': currency}"/><br/>
+Variação: <span t-esc="comp_var" t-options="{'widget': 'monetary', 'display_currency': currency}"/>
 </p>
 
 <h3>Mão de Obra / Operações</h3>
@@ -99,11 +100,11 @@ Variação: <span t-esc="comp_var"/>
 
 <tr>
 
-<td><span t-esc="line.item_name"/></td>
+<td><span t-esc="line.item_name.get(o.env.lang) or line.item_name.get('en_US')"/></td>
 <td><span t-field="line.quantity"/></td>
-<td><span t-field="line.planned_cost"/></td>
-<td><span t-field="line.real_cost"/></td>
-<td><span t-field="line.variance_cost"/></td>
+<td><span t-field="line.planned_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
+<td><span t-field="line.real_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
+<td><span t-field="line.variance_cost" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
 
 </tr>
 
@@ -134,17 +135,17 @@ Variação: <span t-esc="op_var"/>
 
 <tr>
 <td><strong>Total Planejado</strong></td>
-<td><span t-esc="total_plan"/></td>
+<td><span t-esc="total_plan" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
 </tr>
 
 <tr>
 <td><strong>Total Real</strong></td>
-<td><span t-esc="total_real"/></td>
+<td><span t-esc="total_real" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
 </tr>
 
 <tr>
 <td><strong>Variação</strong></td>
-<td><span t-esc="total_var"/></td>
+<td><span t-esc="total_var" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
 </tr>
 
 </table>
@@ -157,12 +158,12 @@ Variação: <span t-esc="op_var"/>
 
 <tr>
 <td><strong>Custo Planejado / Unidade</strong></td>
-<td><span t-esc="total_plan / o.product_qty"/></td>
+<td><span t-esc="total_plan / o.product_qty" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
 </tr>
 
 <tr>
 <td><strong>Custo Real / Unidade</strong></td>
-<td><span t-esc="total_real / o.product_qty"/></td>
+<td><span t-esc="total_real / o.product_qty" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
 </tr>
 
 </table>
