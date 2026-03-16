@@ -45,7 +45,7 @@ class MrpRealCostReport(models.Model):
         CREATE VIEW mrp_real_cost_report AS (
 
         WITH RECURSIVE production_tree AS (
-
+        
             SELECT
                 mp.id,
                 mp.parent_production_id,
@@ -54,119 +54,116 @@ class MrpRealCostReport(models.Model):
                 mp.id::text as path
             FROM mrp_production mp
             WHERE mp.parent_production_id IS NULL
-
+        
             UNION ALL
-
+        
             SELECT
                 child.id,
                 child.parent_production_id,
                 child.product_id,
                 pt.level + 1,
-                pt.path || '>' || child.id
+                pt.path || '.' || child.id
             FROM mrp_production child
             JOIN production_tree pt
                 ON pt.id = child.parent_production_id
         )
-
-        /* COMPONENTES */
-
+        
         SELECT
-
+        
             sm.id as id,
+        
             ptree.id as production_id,
             ptree.parent_production_id,
             ptree.product_id,
-
+        
             ptree.level,
             ptree.path as production_path,
-
+        
             'component' as cost_type,
-
-            COALESCE(pt.name->>'pt_BR',pt.name->>'en_US') as item_name,
-
+        
+            COALESCE(pt.name->>'pt_BR', pt.name->>'en_US') as item_name,
+        
             sm.quantity_done as quantity,
-
-            (COALESCE(ip.value_float,0)*sm.quantity_done)::numeric(16,2) as planned_cost,
-
-            COALESCE(svl.value,0)::numeric(16,2) as real_cost,
-
-            ROUND(
-                (COALESCE(svl.value,0) -
-                (COALESCE(ip.value_float,0)*sm.quantity_done))::numeric
-            ,2) as variance_cost,
-
+        
+            (COALESCE(ip.value_float,0) * sm.quantity_done) as planned_cost,
+        
+            COALESCE(svl.value,0) as real_cost,
+        
+            (
+                COALESCE(svl.value,0) -
+                (COALESCE(ip.value_float,0) * sm.quantity_done)
+            ) as variance_cost,
+        
             mp.date_finished
-
+        
         FROM stock_move sm
-
+        
         JOIN production_tree ptree
             ON ptree.id = sm.raw_material_production_id
-
+        
         JOIN mrp_production mp
             ON mp.id = ptree.id
-
+        
         JOIN product_product pp
             ON pp.id = sm.product_id
-
+        
         JOIN product_template pt
             ON pt.id = pp.product_tmpl_id
-
+        
         LEFT JOIN ir_property ip
-            ON ip.res_id='product.product,'||pp.id
-            AND ip.name='standard_price'
-
+            ON ip.res_id = 'product.product,' || pp.id
+            AND ip.name = 'standard_price'
+        
         LEFT JOIN stock_valuation_layer svl
-            ON svl.stock_move_id=sm.id
-
-        WHERE sm.state='done'
-
-
+            ON svl.stock_move_id = sm.id
+        
+        WHERE sm.state = 'done'
+        
+        
         UNION ALL
-
-
-        /* MÃO DE OBRA */
-
+        
+        
         SELECT
-
+        
             wo.id + 100000000 as id,
-
+        
             ptree.id as production_id,
             ptree.parent_production_id,
             ptree.product_id,
-
+        
             ptree.level,
             ptree.path as production_path,
-
+        
             'labor' as cost_type,
-
+        
             wc.name as item_name,
-
-            wo.duration/60.0 as quantity,
-
-            ROUND(((wo.duration_expected/60.0)*wc.costs_hour)::numeric,2) as planned_cost,
-
-            ROUND(((wo.duration/60.0)*wc.costs_hour)::numeric,2) as real_cost,
-
-            ROUND(
-                (((wo.duration/60.0)*wc.costs_hour) -
-                ((wo.duration_expected/60.0)*wc.costs_hour))::numeric
-            ,2) as variance_cost,
-
+        
+            wo.duration / 60.0 as quantity,
+        
+            (wo.duration_expected / 60.0) * wc.costs_hour as planned_cost,
+        
+            (wo.duration / 60.0) * wc.costs_hour as real_cost,
+        
+            (
+                ((wo.duration / 60.0) * wc.costs_hour) -
+                ((wo.duration_expected / 60.0) * wc.costs_hour)
+            ) as variance_cost,
+        
             mp.date_finished
-
+        
         FROM mrp_workorder wo
-
+        
         JOIN production_tree ptree
             ON ptree.id = wo.production_id
-
+        
         JOIN mrp_production mp
             ON mp.id = ptree.id
-
+        
         JOIN mrp_workcenter wc
             ON wc.id = wo.workcenter_id
-
+        
         WHERE wo.state='done'
-
+        
         )
 
         """)

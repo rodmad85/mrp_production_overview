@@ -10,6 +10,11 @@
     <field name="name">Custos Produção</field>
     <field name="res_model">mrp.real.cost.report</field>
     <field name="view_mode">tree,pivot</field>
+    <field name="context">
+{
+    'group_by': ['production_id']
+}
+</field>
 
 </record>
 
