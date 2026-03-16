@@ -102,35 +102,36 @@ class MrpRealCostReport(models.Model):
             mp.date_finished
 
         FROM stock_move sm
-
+        
         JOIN production_tree ptree
             ON ptree.id = sm.raw_material_production_id
-
+        
         JOIN mrp_production mp
             ON mp.id = ptree.id
-
+        
         JOIN product_product pp
             ON pp.id = sm.product_id
-
+        
         JOIN product_template pt
             ON pt.id = pp.product_tmpl_id
-
+        
         LEFT JOIN ir_property ip
             ON ip.res_id = 'product.product,' || pp.id
             AND ip.name = 'standard_price'
-
+        
         LEFT JOIN stock_valuation_layer svl
             ON svl.stock_move_id = sm.id
-
-        /* REMOVE COMPONENTES QUE POSSUEM OP FILHA */
-
+        
         WHERE sm.state = 'done'
+        
+        /* REMOVE APENAS COMPONENTES QUE VIRARAM OP FILHA */
+        
         AND NOT EXISTS (
             SELECT 1
             FROM mrp_production child
             WHERE child.parent_production_id = mp.id
+            AND child.product_id = sm.product_id
         )
-
 
         UNION ALL
 
