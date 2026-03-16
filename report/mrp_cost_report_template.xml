@@ -1,12 +1,20 @@
 <odoo>
-<template id="mrp_production_cost_report">
+
+<template id="report_mrp_real_cost">
 
 <t t-call="web.external_layout">
 
-<h2>Relatório de Custos de Produção</h2>
+<t t-set="doc" t-value="doc"/>
+
+<h2>
+Relatório de Custos de Produção
+</h2>
 
 <p>
-Ordem: <span t-field="doc.name"/>
+
+<strong>Ordem:</strong>
+<span t-field="doc.name"/>
+
 </p>
 
 <table class="table table-sm">
@@ -14,11 +22,13 @@ Ordem: <span t-field="doc.name"/>
 <thead>
 
 <tr>
+
 <th>Tipo</th>
 <th>Item</th>
 <th>Qtd</th>
 <th>Custo Unit</th>
 <th>Total</th>
+
 </tr>
 
 </thead>
@@ -28,6 +38,8 @@ Ordem: <span t-field="doc.name"/>
 <t t-set="total_component" t-value="0"/>
 <t t-set="total_labor" t-value="0"/>
 
+<!-- COMPONENTES -->
+
 <t t-foreach="doc.move_raw_ids" t-as="line">
 
 <tr>
@@ -35,25 +47,35 @@ Ordem: <span t-field="doc.name"/>
 <td>Componente</td>
 
 <td>
+
 <span t-field="line.product_id"/>
+
 </td>
 
 <td>
+
 <span t-field="line.quantity_done"/>
+
 </td>
 
 <td>
-<span t-esc="line.stock_valuation_layer_ids and line.stock_valuation_layer_ids[0].unit_cost or 0"/>
+
+<t t-set="unit"
+t-value="line.stock_valuation_layer_ids and line.stock_valuation_layer_ids[0].unit_cost or 0"/>
+
+<span t-esc="unit"/>
+
 </td>
 
 <td>
 
 <t t-set="cost"
-   t-value="(line.stock_valuation_layer_ids and line.stock_valuation_layer_ids[0].value) or 0"/>
+t-value="line.stock_valuation_layer_ids and line.stock_valuation_layer_ids[0].value or 0"/>
 
 <span t-esc="cost"/>
 
-<t t-set="total_component" t-value="total_component + cost"/>
+<t t-set="total_component"
+t-value="total_component + cost"/>
 
 </td>
 
@@ -65,14 +87,112 @@ Ordem: <span t-field="doc.name"/>
 
 </table>
 
+<br/>
+
 <h4>
 
-Componentes:
+Subtotal Componentes:
+
 <span t-esc="total_component"/>
 
 </h4>
 
+<br/>
+
+<table class="table table-sm">
+
+<thead>
+
+<tr>
+
+<th>Operação</th>
+<th>Horas</th>
+<th>Custo Hora</th>
+<th>Total</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<t t-foreach="doc.workorder_ids" t-as="wo">
+
+<tr>
+
+<td>
+
+<span t-field="wo.workcenter_id"/>
+
+</td>
+
+<td>
+
+<t t-set="hours"
+t-value="wo.duration / 60.0"/>
+
+<span t-esc="hours"/>
+
+</td>
+
+<td>
+
+<span t-field="wo.workcenter_id.costs_hour"/>
+
+</td>
+
+<td>
+
+<t t-set="cost"
+t-value="(wo.duration / 60.0) * wo.workcenter_id.costs_hour"/>
+
+<span t-esc="cost"/>
+
+<t t-set="total_labor"
+t-value="total_labor + cost"/>
+
+</td>
+
+</tr>
+
+</t>
+
+</tbody>
+
+</table>
+
+<br/>
+
+<h4>
+
+Subtotal Mão de Obra:
+
+<span t-esc="total_labor"/>
+
+</h4>
+
+<hr/>
+
+<h3>
+
+TOTAL PRODUÇÃO:
+
+<span t-esc="total_component + total_labor"/>
+
+</h3>
+
 </t>
 
 </template>
+
+
+<report
+    id="action_report_mrp_real_cost"
+    model="mrp.production"
+    string="Custos de Produção"
+    report_type="qweb-pdf"
+    name="mrp_real_cost.report_mrp_real_cost"
+    file="mrp_real_cost.report_mrp_real_cost"
+/>
+
 </odoo>

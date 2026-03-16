@@ -3,25 +3,48 @@ from odoo import models, fields, tools
 
 class MrpRealCostReport(models.Model):
     _name = "mrp.real.cost.report"
-    _description = "MRP Real Production Cost"
+    _description = "Relatório de Custos Reais de Produção"
     _auto = False
+    _order = "production_id"
 
-    production_id = fields.Many2one("mrp.production")
-    product_id = fields.Many2one("product.product")
-    cost_type = fields.Char()
-    item_name = fields.Char()
-    quantity = fields.Float()
-    unit_cost = fields.Float()
-    total_cost = fields.Float()
-    date_finished = fields.Datetime()
+    production_id = fields.Many2one(
+        "mrp.production",
+        string="Ordem de Produção"
+    )
+
+    product_id = fields.Many2one(
+        "product.product",
+        string="Produto"
+    )
+
+    cost_type = fields.Selection(
+        [
+            ("component", "Componente"),
+            ("labor", "Mão de obra"),
+        ],
+        string="Tipo"
+    )
+
+    item_name = fields.Char("Item")
+
+    quantity = fields.Float("Quantidade")
+
+    unit_cost = fields.Float("Custo Unitário")
+
+    total_cost = fields.Float("Custo Total")
+
+    date_finished = fields.Datetime("Data Conclusão")
 
     def init(self):
 
-        tools.drop_view_if_exists(self.env.cr, 'mrp_real_cost_report')
+        tools.drop_view_if_exists(self.env.cr, "mrp_real_cost_report")
 
-        self.env.cr.execute("""
+        self.env.cr.execute(
+            """
 
         CREATE VIEW mrp_real_cost_report AS (
+
+        /* COMPONENTES */
 
         SELECT
 
@@ -29,7 +52,7 @@ class MrpRealCostReport(models.Model):
             mp.id as production_id,
             mp.product_id as product_id,
 
-            'Componente' as cost_type,
+            'component' as cost_type,
 
             pt.name->>'pt_BR' as item_name,
 
@@ -59,13 +82,17 @@ class MrpRealCostReport(models.Model):
 
         UNION ALL
 
+        /* MÃO DE OBRA */
+
         SELECT
 
             wo.id + 100000000 as id,
+
             mp.id as production_id,
+
             mp.product_id as product_id,
 
-            'Serviço' as cost_type,
+            'labor' as cost_type,
 
             wc.name as item_name,
 
@@ -88,5 +115,5 @@ class MrpRealCostReport(models.Model):
         WHERE wo.state='done'
 
         )
-
-        """)
+        """
+        )
