@@ -1,0 +1,45 @@
+<odoo>
+
+    <record id="view_mrp_real_cost_tree" model="ir.ui.view">
+        <field name="name">mrp.real.cost.tree</field>
+        <field name="model">mrp.real.cost.report</field>
+        <field name="arch" type="xml">
+            <tree>
+
+                <field name="date_finished"/>
+                <field name="production_id"/>
+                <field name="product_id"/>
+
+                <field name="component_id"/>
+
+                <field name="bom_qty"/>
+                <field name="consumed_qty"/>
+
+                <field name="planned_cost"/>
+                <field name="real_cost"/>
+                <field name="variance_cost"/>
+
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mrp_real_cost_pivot" model="ir.ui.view">
+        <field name="name">mrp.real.cost.pivot</field>
+        <field name="model">mrp.real.cost.report</field>
+        <field name="arch" type="xml">
+            <pivot>
+
+                <field name="product_id" type="row"/>
+                <field name="component_id" type="row"/>
+
+                <field name="date_finished" type="col" interval="month"/>
+
+                <field name="planned_cost" type="measure"/>
+                <field name="real_cost" type="measure"/>
+                <field name="variance_cost" type="measure"/>
+
+            </pivot>
+        </field>
+    </record>
+
+</odoo>

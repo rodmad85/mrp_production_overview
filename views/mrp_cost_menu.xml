@@ -1,0 +1,15 @@
+<odoo>
+
+    <record id="action_mrp_real_cost_report" model="ir.actions.act_window">
+        <field name="name">Estrutura de Custos Produção</field>
+        <field name="res_model">mrp.real.cost.report</field>
+        <field name="view_mode">tree,pivot</field>
+    </record>
+
+    <menuitem
+        id="menu_mrp_real_cost_report"
+        name="Custos Reais Produção"
+        parent="mrp.menu_mrp_reporting"
+        action="action_mrp_real_cost_report"/>
+
+</odoo>

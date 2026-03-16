@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mrp_real_cost_report,mrp.real.cost.report,model_mrp_real_cost_report,,1,0,0,0
