@@ -49,19 +49,21 @@ class MrpRealCostReport(models.Model):
                 mp.id,
                 mp.parent_production_id,
                 mp.product_id,
+                mp.id as root_production_id,
                 1 as level,
-                mp.id::text as path
+                LPAD(mp.id::text, 10, '0') as path
             FROM mrp_production mp
             WHERE mp.parent_production_id IS NULL
-
+        
             UNION ALL
-
+        
             SELECT
                 child.id,
                 child.parent_production_id,
                 child.product_id,
+                pt.root_production_id,
                 pt.level + 1,
-                pt.path || '.' || child.id
+                pt.path || '.' || LPAD(child.id::text, 10, '0')
             FROM mrp_production child
             JOIN production_tree pt
                 ON pt.id = child.parent_production_id

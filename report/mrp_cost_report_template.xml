@@ -2,57 +2,94 @@
 
 <template id="report_mrp_real_cost">
 
-<t t-call="web.external_layout">
+    <t t-call="web.external_layout">
+        <main>
 
-<main>
+            <t t-set="docs" t-value="docs.sorted(key=lambda r: r.production_path)"/>
 
-<h2>Relatório de Custos de Produção</h2>
+            <h2>Relatório de Custos de Produção</h2>
 
-<t t-set="lines"
-   t-value="env['mrp.real.cost.report'].search([('production_id','=',doc.id)])"/>
+            <table class="table table-sm table-bordered">
 
-<table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Ordem</th>
+                        <th>Produto</th>
+                        <th>Tipo</th>
+                        <th>Item</th>
+                        <th class="text-end">Qtd</th>
+                        <th class="text-end">Planejado</th>
+                        <th class="text-end">Real</th>
+                        <th class="text-end">Variação</th>
+                    </tr>
+                </thead>
 
-<thead>
-<tr>
-<th>Tipo</th>
-<th>Item</th>
-<th>Qtd</th>
-<th>Planejado</th>
-<th>Real</th>
-<th>Variação</th>
-</tr>
-</thead>
+                <tbody>
 
-<tbody>
+                    <t t-foreach="docs" t-as="line">
 
-<t t-foreach="lines" t-as="l">
+                        <tr>
 
-<tr>
+                            <td>
+                                <span t-esc="line.production_id.name"/>
+                            </td>
 
-<td><span t-field="l.cost_type"/></td>
+                            <td>
+                                <span t-esc="line.product_id.display_name"/>
+                            </td>
 
-<td><span t-esc="l.item_name"/></td>
+                            <td>
+                                <span t-esc="line.cost_type"/>
+                            </td>
 
-<td><span t-field="l.quantity"/></td>
+                            <td>
 
-<td><span t-field="l.planned_cost"/></td>
+                                <!-- indentação baseada no nível -->
 
-<td><span t-field="l.real_cost"/></td>
+                                <span t-att-style="'margin-left:%spx' % (line.level * 20)"/>
 
-<td><span t-field="l.variance_cost"/></td>
+                                <span t-esc="line.item_name"/>
 
-</tr>
+                            </td>
 
-</t>
+                            <td class="text-end">
+                                <span t-esc="line.quantity"/>
+                            </td>
 
-</tbody>
+                            <td class="text-end">
+                                <span t-field="line.planned_cost"
+                                      t-options='{"widget": "monetary", "display_currency": line.env.company.currency_id}'/>
+                            </td>
 
-</table>
+                            <td class="text-end">
+                                <span t-field="line.real_cost"
+                                      t-options='{"widget": "monetary", "display_currency": line.env.company.currency_id}'/>
+                            </td>
 
-</main>
+                            <td class="text-end">
 
-</t>
+                                <span t-att-class="
+                                    'text-danger' if line.variance_cost &lt; 0
+                                    else 'text-success' if line.variance_cost &gt; 0
+                                    else ''">
+
+                                    <span t-field="line.variance_cost"
+                                          t-options='{"widget": "monetary", "display_currency": line.env.company.currency_id}'/>
+
+                                </span>
+
+                            </td>
+
+                        </tr>
+
+                    </t>
+
+                </tbody>
+
+            </table>
+
+        </main>
+    </t>
 
 </template>
 
