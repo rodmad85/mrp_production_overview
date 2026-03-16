@@ -47,7 +47,7 @@ class MrpRealCostReport(models.Model):
         
             'component' AS cost_type,
         
-            pt.name::text AS item_name,
+            COALESCE(pt.name->>'pt_BR', pt.name->>'en_US') as item_name,
         
             sm.quantity_done AS quantity,
         
