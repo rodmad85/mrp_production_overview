@@ -8,7 +8,7 @@ class MrpRealCostReport(models.Model):
     _order = "production_id"
 
     production_id = fields.Many2one("mrp.production", string="Ordem")
-    product_id = fields.Many2one("product.product", string="Produto", related="production_id.product_id")
+    product_id = fields.Many2one("product.product", string="Produto", readonly=True)
 
     cost_type = fields.Selection([
         ("component", "Componente"),
@@ -47,7 +47,7 @@ class MrpRealCostReport(models.Model):
 
             'component' as cost_type,
 
-            pt.name::text as item_name,
+            pt.name->>current_setting('odoo.lang') as item_name,
 
             sm.quantity_done as quantity,
 
