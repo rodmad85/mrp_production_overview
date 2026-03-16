@@ -67,9 +67,9 @@ class MrpRealCostReport(models.Model):
                 ON pt.id = child.parent_production_id
         )
 
-        /* ============================= */
-        /* COMPONENTES                  */
-        /* ============================= */
+        /* ========================= */
+        /* COMPONENTES               */
+        /* ========================= */
 
         SELECT
 
@@ -88,14 +88,14 @@ class MrpRealCostReport(models.Model):
 
             sm.quantity_done as quantity,
 
-            (COALESCE(ip.value_float,0) * sm.quantity_done) as planned_cost,
+            ROUND((COALESCE(ip.value_float,0) * sm.quantity_done)::numeric,2) as planned_cost,
 
-            COALESCE(svl.value,0) as real_cost,
+            ROUND(COALESCE(svl.value,0)::numeric,2) as real_cost,
 
-            (
-                COALESCE(svl.value,0) -
-                (COALESCE(ip.value_float,0) * sm.quantity_done)
-            ) as variance_cost,
+            ROUND(
+                ROUND(COALESCE(svl.value,0)::numeric,2) -
+                ROUND((COALESCE(ip.value_float,0) * sm.quantity_done)::numeric,2)
+            ,2) as variance_cost,
 
             mp.date_finished
 
@@ -120,22 +120,22 @@ class MrpRealCostReport(models.Model):
         LEFT JOIN stock_valuation_layer svl
             ON svl.stock_move_id = sm.id
 
-        /* REMOVE COMPONENTES QUE VIRARAM OP FILHA */
-
-        LEFT JOIN mrp_production child_op
-            ON child_op.parent_production_id = mp.id
-            AND child_op.product_id = sm.product_id
+        /* REMOVE COMPONENTES QUE POSSUEM OP FILHA */
 
         WHERE sm.state = 'done'
-        AND child_op.id IS NULL
+        AND NOT EXISTS (
+            SELECT 1
+            FROM mrp_production child
+            WHERE child.parent_production_id = mp.id
+        )
 
 
         UNION ALL
 
 
-        /* ============================= */
-        /* MÃO DE OBRA                  */
-        /* ============================= */
+        /* ========================= */
+        /* MÃO DE OBRA               */
+        /* ========================= */
 
         SELECT
 
@@ -154,14 +154,14 @@ class MrpRealCostReport(models.Model):
 
             wo.duration / 60.0 as quantity,
 
-            (wo.duration_expected / 60.0) * wc.costs_hour as planned_cost,
+            ROUND(((wo.duration_expected / 60.0) * wc.costs_hour)::numeric,2) as planned_cost,
 
-            (wo.duration / 60.0) * wc.costs_hour as real_cost,
+            ROUND(((wo.duration / 60.0) * wc.costs_hour)::numeric,2) as real_cost,
 
-            (
-                ((wo.duration / 60.0) * wc.costs_hour) -
-                ((wo.duration_expected / 60.0) * wc.costs_hour)
-            ) as variance_cost,
+            ROUND(
+                ROUND(((wo.duration / 60.0) * wc.costs_hour)::numeric,2) -
+                ROUND(((wo.duration_expected / 60.0) * wc.costs_hour)::numeric,2)
+            ,2) as variance_cost,
 
             mp.date_finished
 
@@ -176,7 +176,7 @@ class MrpRealCostReport(models.Model):
         JOIN mrp_workcenter wc
             ON wc.id = wo.workcenter_id
 
-        WHERE wo.state = 'done'
+        WHERE wo.state='done'
 
         )
 
