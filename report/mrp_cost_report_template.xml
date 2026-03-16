@@ -1,7 +1,78 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
+<template id="mrp_production_cost_report">
 
+<t t-call="web.external_layout">
 
-    </data>
+<h2>Relatório de Custos de Produção</h2>
+
+<p>
+Ordem: <span t-field="doc.name"/>
+</p>
+
+<table class="table table-sm">
+
+<thead>
+
+<tr>
+<th>Tipo</th>
+<th>Item</th>
+<th>Qtd</th>
+<th>Custo Unit</th>
+<th>Total</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<t t-set="total_component" t-value="0"/>
+<t t-set="total_labor" t-value="0"/>
+
+<t t-foreach="doc.move_raw_ids" t-as="line">
+
+<tr>
+
+<td>Componente</td>
+
+<td>
+<span t-field="line.product_id"/>
+</td>
+
+<td>
+<span t-field="line.quantity_done"/>
+</td>
+
+<td>
+<span t-esc="line.stock_valuation_layer_ids and line.stock_valuation_layer_ids[0].unit_cost or 0"/>
+</td>
+
+<td>
+
+<t t-set="cost"
+   t-value="(line.stock_valuation_layer_ids and line.stock_valuation_layer_ids[0].value) or 0"/>
+
+<span t-esc="cost"/>
+
+<t t-set="total_component" t-value="total_component + cost"/>
+
+</td>
+
+</tr>
+
+</t>
+
+</tbody>
+
+</table>
+
+<h4>
+
+Componentes:
+<span t-esc="total_component"/>
+
+</h4>
+
+</t>
+
+</template>
 </odoo>

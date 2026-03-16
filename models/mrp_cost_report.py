@@ -1,71 +1,92 @@
-from odoo import models, fields
+from odoo import models, fields, tools
 
 
 class MrpRealCostReport(models.Model):
     _name = "mrp.real.cost.report"
-    _description = "MRP Real Cost Report"
+    _description = "MRP Real Production Cost"
     _auto = False
-    _order = "production_id"
 
-    production_id = fields.Many2one("mrp.production", string="Ordem Produção")
-    product_id = fields.Many2one("product.product", string="Produto")
-
-    component_id = fields.Many2one("product.product", string="Componente")
-
-    level = fields.Integer("Nível LDM")
-
-    bom_qty = fields.Float("Qtd Planejada")
-    consumed_qty = fields.Float("Qtd Consumida")
-
-    planned_cost = fields.Float("Custo Planejado")
-    real_cost = fields.Float("Custo Real")
-
-    variance_cost = fields.Float("Variação")
-
-    date_finished = fields.Datetime("Data Produção")
+    production_id = fields.Many2one("mrp.production")
+    product_id = fields.Many2one("product.product")
+    cost_type = fields.Char()
+    item_name = fields.Char()
+    quantity = fields.Float()
+    unit_cost = fields.Float()
+    total_cost = fields.Float()
+    date_finished = fields.Datetime()
 
     def init(self):
 
+        tools.drop_view_if_exists(self.env.cr, 'mrp_real_cost_report')
+
         self.env.cr.execute("""
 
-            CREATE OR REPLACE VIEW mrp_real_cost_report AS (
-                
-                SELECT
-                
-                    sm.id as id,
-                
-                    mp.id as production_id,
-                    mp.product_id as product_id,
-                
-                    sm.product_id as component_id,
-                
-                    1 as level,
-                
-                    bl.product_qty as bom_qty,
-                
-                    sm.quantity_done as consumed_qty,
-                
-                    (bl.product_qty * COALESCE(svl.unit_cost,0)) as planned_cost,
-                
-                    svl.value as real_cost,
-                
-                    (svl.value - (bl.product_qty * COALESCE(svl.unit_cost,0))) as variance_cost,
-                
-                    mp.date_finished as date_finished
-                
-                FROM stock_move sm
-                
-                JOIN mrp_production mp
-                    ON mp.id = sm.raw_material_production_id
-                
-                LEFT JOIN mrp_bom_line bl
-                    ON bl.product_id = sm.product_id
-                    AND bl.bom_id = mp.bom_id
-                
-                LEFT JOIN stock_valuation_layer svl
-                    ON svl.stock_move_id = sm.id
-                
-                WHERE sm.state = 'done'
-                
-                )
+        CREATE VIEW mrp_real_cost_report AS (
+
+        SELECT
+
+            sm.id as id,
+            mp.id as production_id,
+            mp.product_id as product_id,
+
+            'component' as cost_type,
+
+            pt.name->>'pt_BR' as item_name,
+
+            sm.quantity_done as quantity,
+
+            COALESCE(svl.unit_cost,0) as unit_cost,
+
+            COALESCE(svl.value,0) as total_cost,
+
+            mp.date_finished as date_finished
+
+        FROM stock_move sm
+
+        JOIN mrp_production mp
+            ON mp.id = sm.raw_material_production_id
+
+        JOIN product_product pp
+            ON pp.id = sm.product_id
+
+        JOIN product_template pt
+            ON pt.id = pp.product_tmpl_id
+
+        LEFT JOIN stock_valuation_layer svl
+            ON svl.stock_move_id = sm.id
+
+        WHERE sm.state='done'
+
+        UNION ALL
+
+        SELECT
+
+            wo.id + 100000000 as id,
+            mp.id as production_id,
+            mp.product_id as product_id,
+
+            'labor' as cost_type,
+
+            wc.name as item_name,
+
+            wo.duration / 60.0 as quantity,
+
+            wc.costs_hour as unit_cost,
+
+            (wo.duration / 60.0) * wc.costs_hour as total_cost,
+
+            mp.date_finished as date_finished
+
+        FROM mrp_workorder wo
+
+        JOIN mrp_production mp
+            ON mp.id = wo.production_id
+
+        JOIN mrp_workcenter wc
+            ON wc.id = wo.workcenter_id
+
+        WHERE wo.state='done'
+
+        )
+
         """)
