@@ -8,7 +8,7 @@ class MrpRealCostReport(models.Model):
     _order = "production_id"
 
     production_id = fields.Many2one("mrp.production", string="Ordem")
-    product_id = fields.Many2one("product.product", string="Produto")
+    product_id = fields.Many2one("product.product", string="Produto", related="production_id.product_id")
 
     cost_type = fields.Selection([
         ("component", "Componente"),
