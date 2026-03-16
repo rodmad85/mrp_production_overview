@@ -7,7 +7,7 @@
 
         <field name="context">
             {
-            'group_by': ['production_id','cost_type']
+            'group_by': ['product_id','cost_type']
             }
         </field>
 
