@@ -4,17 +4,24 @@
         <field name="name">mrp.real.cost.tree</field>
         <field name="model">mrp.real.cost.report</field>
         <field name="arch" type="xml">
+
             <tree string="Custos Produção">
 
-                <field name="production_id" string="Produção"/>
-                <field name="cost_type" string="Tipo"/>
-                <field name="item_name" string="Nome do Item"/>
+                <field name="production_id"/>
+
+                <field name="cost_type"/>
+
+                <field name="item_name"/>
+
                 <field name="quantity"/>
-                <field name="unit_cost"/>
-                <field name="total_cost" sum="Total"/>
+
+                <field name="planned_cost" sum="Planejado"/>
+
+                <field name="real_cost" sum="Real"/>
+
+                <field name="variance_cost" sum="Variação"/>
 
             </tree>
-
         </field>
     </record>
 
@@ -27,7 +34,7 @@
                 <field name="production_id" type="row"/>
                 <field name="cost_type" type="row"/>
                 <field name="item_name" type="row"/>
-                <field name="total_cost" type="measure"/>
+                <field name="real_cost" type="measure"/>
 
             </pivot>
         </field>

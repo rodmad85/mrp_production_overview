@@ -1,22 +1,45 @@
 <odoo>
 
     <record id="action_mrp_real_cost_report" model="ir.actions.act_window">
-    <field name="name">Custos Reais Produção</field>
-    <field name="res_model">mrp.real.cost.report</field>
-    <field name="view_mode">tree,pivot</field>
+        <field name="name">Custos Reais Produção</field>
+        <field name="res_model">mrp.real.cost.report</field>
+        <field name="view_mode">tree,pivot</field>
 
-    <field name="context">
-        {
+        <field name="context">
+            {
             'group_by': ['production_id','cost_type']
-        }
-    </field>
+            }
+        </field>
 
-</record>
+    </record>
+
+    <record id="mrp_production_form_cost_button" model="ir.ui.view">
+
+        <field name="name">mrp.production.cost.button</field>
+        <field name="model">mrp.production</field>
+        <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+
+        <field name="arch" type="xml">
+
+            <xpath expr="//header" position="inside">
+
+                <button
+                        name="%(action_report_mrp_real_cost)d"
+                        string="Imprimir Custos"
+                        type="action"
+                        class="btn-primary"
+                />
+
+            </xpath>
+
+        </field>
+
+    </record>
 
     <menuitem
-        id="menu_mrp_real_cost_report"
-        name="Custos Reais Produção"
-        parent="mrp.menu_mrp_reporting"
-        action="action_mrp_real_cost_report"/>
+            id="menu_mrp_real_cost_report"
+            name="Custos Reais Produção"
+            parent="mrp.menu_mrp_reporting"
+            action="action_mrp_real_cost_report"/>
 
 </odoo>

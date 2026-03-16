@@ -3,44 +3,35 @@ from odoo import models, fields, tools
 
 class MrpRealCostReport(models.Model):
     _name = "mrp.real.cost.report"
-    _description = "Relatório de Custos Reais de Produção"
+    _description = "Relatório de Custos de Produção"
     _auto = False
     _order = "production_id"
 
-    production_id = fields.Many2one(
-        "mrp.production",
-        string="Ordem de Produção"
-    )
+    production_id = fields.Many2one("mrp.production", string="Ordem")
+    product_id = fields.Many2one("product.product", string="Produto")
 
-    product_id = fields.Many2one(
-        "product.product",
-        string="Produto"
-    )
-
-    cost_type = fields.Selection(
-        [
-            ("component", "Componente"),
-            ("labor", "Mão de obra"),
-        ],
-        string="Tipo"
-    )
+    cost_type = fields.Selection([
+        ("component", "Componente"),
+        ("labor", "Mão de obra"),
+    ])
 
     item_name = fields.Char("Item")
 
     quantity = fields.Float("Quantidade")
 
-    unit_cost = fields.Float("Custo Unitário")
+    planned_cost = fields.Float("Custo Planejado")
 
-    total_cost = fields.Float("Custo Total")
+    real_cost = fields.Float("Custo Real")
 
-    date_finished = fields.Datetime("Data Conclusão")
+    variance_cost = fields.Float("Variação")
+
+    date_finished = fields.Datetime("Finalização")
 
     def init(self):
 
         tools.drop_view_if_exists(self.env.cr, "mrp_real_cost_report")
 
-        self.env.cr.execute(
-            """
+        self.env.cr.execute("""
 
         CREATE VIEW mrp_real_cost_report AS (
 
@@ -49,20 +40,25 @@ class MrpRealCostReport(models.Model):
         SELECT
 
             sm.id as id,
+
             mp.id as production_id,
-            mp.product_id as product_id,
+
+            mp.product_id,
 
             'component' as cost_type,
 
-            pt.name->>'pt_BR' as item_name,
+            pt.name::text as item_name,
 
             sm.quantity_done as quantity,
 
-            COALESCE(svl.unit_cost,0) as unit_cost,
+            COALESCE(ip.value_float,0) * sm.quantity_done as planned_cost,
 
-            COALESCE(svl.value,0) as total_cost,
+            COALESCE(svl.value,0) as real_cost,
 
-            mp.date_finished as date_finished
+            COALESCE(svl.value,0) -
+            (COALESCE(ip.value_float,0) * sm.quantity_done) as variance_cost,
+
+            mp.date_finished
 
         FROM stock_move sm
 
@@ -75,12 +71,18 @@ class MrpRealCostReport(models.Model):
         JOIN product_template pt
             ON pt.id = pp.product_tmpl_id
 
+        LEFT JOIN ir_property ip
+            ON ip.res_id = 'product.product,' || pp.id
+            AND ip.name = 'standard_price'
+
         LEFT JOIN stock_valuation_layer svl
             ON svl.stock_move_id = sm.id
 
-        WHERE sm.state='done'
+        WHERE sm.state = 'done'
+
 
         UNION ALL
+
 
         /* MÃO DE OBRA */
 
@@ -90,7 +92,7 @@ class MrpRealCostReport(models.Model):
 
             mp.id as production_id,
 
-            mp.product_id as product_id,
+            mp.product_id,
 
             'labor' as cost_type,
 
@@ -98,11 +100,14 @@ class MrpRealCostReport(models.Model):
 
             wo.duration / 60.0 as quantity,
 
-            wc.costs_hour as unit_cost,
+            (wo.duration_expected / 60.0) * wc.costs_hour as planned_cost,
 
-            (wo.duration / 60.0) * wc.costs_hour as total_cost,
+            (wo.duration / 60.0) * wc.costs_hour as real_cost,
 
-            mp.date_finished as date_finished
+            ((wo.duration / 60.0) * wc.costs_hour) -
+            ((wo.duration_expected / 60.0) * wc.costs_hour) as variance_cost,
+
+            mp.date_finished
 
         FROM mrp_workorder wo
 
@@ -115,5 +120,5 @@ class MrpRealCostReport(models.Model):
         WHERE wo.state='done'
 
         )
-        """
-        )
+
+        """)
