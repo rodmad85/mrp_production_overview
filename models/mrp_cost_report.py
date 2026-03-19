@@ -73,7 +73,18 @@ class MrpRealCostReport(models.Model):
             JOIN production_tree pt ON pt.id = child.parent_production_id
         ),
 
-        -- Custos dos componentes (matéria-prima) - VERSÃO SIMPLIFICADA
+        -- Preços dos produtos (buscando do ir_property)
+        product_prices AS (
+            SELECT 
+                ip.res_id,
+                ip.value_float as standard_price,
+                substring(ip.res_id, 'product.product,(\\d+)')::integer as product_id
+            FROM ir_property ip
+            WHERE ip.name = 'standard_price'
+              AND ip.res_id LIKE 'product.product,%'
+        ),
+
+        -- Custos dos componentes (matéria-prima) - CORRIGIDO com ir_property
         component_costs AS (
             SELECT
                 sm.raw_material_production_id as production_id,
@@ -148,7 +159,7 @@ class MrpRealCostReport(models.Model):
 
         UNION ALL
 
-        -- COMPONENTES (MATÉRIA-PRIMA) - VERSÃO SIMPLIFICADA
+        -- COMPONENTES (MATÉRIA-PRIMA) - CORRIGIDO com product.standard_price (campo relacional)
         SELECT
             (1000000 + sm.id)::bigint as id,
 
