@@ -76,7 +76,7 @@ class MrpRealCostReport(models.Model):
         -- Buscar preços dos produtos da tabela ir_property
         product_standard_prices AS (
             SELECT 
-                substring(ip.res_id FROM 'product.product,(\\d+)')::integer as product_id,
+                CAST(SUBSTRING(ip.res_id FROM 'product.product,(\\d+)') AS INTEGER) as product_id,
                 ip.value_float as standard_price,
                 ip.company_id
             FROM ir_property ip
@@ -84,7 +84,7 @@ class MrpRealCostReport(models.Model):
               AND ip.res_id LIKE 'product.product,%'
         ),
 
-        -- Custos dos componentes (matéria-prima) - CORRIGIDO
+        -- Custos dos componentes (matéria-prima)
         component_costs AS (
             SELECT
                 sm.raw_material_production_id as production_id,
@@ -142,7 +142,8 @@ class MrpRealCostReport(models.Model):
 
             'production'::varchar as cost_type,
 
-            repeat('   ', pt.level-1) || pt.name as item_name,
+            -- Usando CONCAT para evitar problemas com JSON
+            CONCAT(REPEAT('   ', pt.level-1), pt.name) as item_name,
 
             1.0 as quantity,
             NULL::int as uom_id,
@@ -160,7 +161,7 @@ class MrpRealCostReport(models.Model):
 
         UNION ALL
 
-        -- COMPONENTES (MATÉRIA-PRIMA) - CORRIGIDO
+        -- COMPONENTES (MATÉRIA-PRIMA)
         SELECT
             (1000000 + sm.id)::bigint as id,
 
@@ -169,11 +170,12 @@ class MrpRealCostReport(models.Model):
             pt.product_id,
 
             pt.level,
-            pt.path || '.' || LPAD(sm.id::text, 10, '0') as production_path,
+            CONCAT(pt.path, '.', LPAD(sm.id::text, 10, '0')) as production_path,
 
             'component'::varchar as cost_type,
 
-            repeat('   ', pt.level) || COALESCE(pt_tmpl.name, 'Componente') as item_name,
+            -- Usando CONCAT para evitar problemas com JSON
+            CONCAT(REPEAT('   ', pt.level), COALESCE(pt_tmpl.name, 'Componente')) as item_name,
 
             sm.quantity_done as quantity,
             sm.product_uom as uom_id,
@@ -209,11 +211,12 @@ class MrpRealCostReport(models.Model):
             pt.product_id,
 
             pt.level,
-            pt.path || '.' || LPAD(wo.id::text, 10, '0') as production_path,
+            CONCAT(pt.path, '.', LPAD(wo.id::text, 10, '0')) as production_path,
 
             'labor'::varchar as cost_type,
 
-            repeat('   ', pt.level) || 'Mão de Obra: ' || wo.name as item_name,
+            -- Usando CONCAT para evitar problemas com JSON
+            CONCAT(REPEAT('   ', pt.level), 'Mão de Obra: ', wo.name) as item_name,
 
             (wo.duration / 60.0) as quantity,
             NULL::int as uom_id,
@@ -223,7 +226,7 @@ class MrpRealCostReport(models.Model):
             ((wo.duration / 60.0) - (wo.duration_expected / 60.0)) * wc.costs_hour as variance_cost,
 
             pt.date_finished,
-            'Mão de Obra: ' || wo.name as display_name,
+            CONCAT('Mão de Obra: ', wo.name) as display_name,
             pt.company_id
 
         FROM mrp_workorder wo
@@ -242,11 +245,12 @@ class MrpRealCostReport(models.Model):
             pt.product_id,
 
             pt.level,
-            pt.path || '.999' as production_path,
+            CONCAT(pt.path, '.999') as production_path,
 
             'total'::varchar as cost_type,
 
-            repeat('   ', pt.level) || 'TOTAL DA ORDEM' as item_name,
+            -- Usando CONCAT para evitar problemas com JSON
+            CONCAT(REPEAT('   ', pt.level), 'TOTAL DA ORDEM') as item_name,
 
             0.0 as quantity,
             NULL::int as uom_id,
