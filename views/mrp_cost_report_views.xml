@@ -4,22 +4,58 @@
         <field name="name">mrp.real.cost.tree</field>
         <field name="model">mrp.real.cost.report</field>
         <field name="arch" type="xml">
-
-            <tree default_order="production_path">
-
-                <field name="display_name"/>
-                <field name="cost_type"/>
-                <field name="quantity"/>
-                <field name="planned_cost" sum="Planejado"/>
-                <field name="real_cost" sum="Real"/>
-                <field name="variance_cost" sum="Variação"/>
-
+            <tree default_order="production_path" decoration-info="cost_type=='production'" decoration-success="cost_type=='total'">
+                <field name="display_name" string="Item"/>
+                <field name="cost_type" string="Tipo"/>
+                <field name="quantity" string="Qtd." sum="Total"/>
+                <field name="uom_id" string="Unid." optional="show"/>
+                <field name="planned_cost" string="Planejado" sum="Planejado" widget="monetary"/>
+                <field name="real_cost" string="Real" sum="Real" widget="monetary"/>
+                <field name="variance_cost" string="Variação" sum="Variação" widget="monetary"
+                       decoration-danger="variance_cost != 0 and variance_cost &lt; 0"
+                       decoration-success="variance_cost != 0 and variance_cost &gt; 0"/>
+                <field name="production_id" invisible="1"/>
+                <field name="level" invisible="1"/>
+                <field name="production_path" invisible="1"/>
             </tree>
-
         </field>
     </record>
 
-        <record id="action_report_mrp_real_cost" model="ir.actions.report">
+    <record id="view_mrp_real_cost_graph" model="ir.ui.view">
+        <field name="name">mrp.real.cost.graph</field>
+        <field name="model">mrp.real.cost.report</field>
+        <field name="arch" type="xml">
+            <graph type="bar">
+                <field name="display_name" type="row"/>
+                <field name="planned_cost" type="measure"/>
+                <field name="real_cost" type="measure"/>
+                <field name="variance_cost" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_mrp_real_cost_pivot" model="ir.ui.view">
+        <field name="name">mrp.real.cost.pivot</field>
+        <field name="model">mrp.real.cost.report</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="cost_type" type="row"/>
+                <field name="display_name" type="row"/>
+                <field name="planned_cost" type="measure"/>
+                <field name="real_cost" type="measure"/>
+                <field name="variance_cost" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_mrp_real_cost_report" model="ir.actions.act_window">
+        <field name="name">Custos Reais de Produção</field>
+        <field name="res_model">mrp.real.cost.report</field>
+        <field name="view_mode">tree,pivot,graph</field>
+        <field name="context">{'search_default_production_id': [active_id]}</field>
+    </record>
+
+    <record id="action_report_mrp_real_cost" model="ir.actions.report">
         <field name="name">Custos de Produção</field>
         <field name="model">mrp.production</field>
         <field name="report_type">qweb-pdf</field>
@@ -30,20 +66,41 @@
     </record>
 
     <record id="mrp_production_form_cost_button" model="ir.ui.view">
-    <field name="name">mrp.production.cost.button</field>
-    <field name="model">mrp.production</field>
-    <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+        <field name="name">mrp.production.cost.button</field>
+        <field name="model">mrp.production</field>
+        <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="%(action_report_mrp_real_cost)d"
+                        string="Imprimir Custos"
+                        type="action"
+                        class="btn-primary"
+                        groups="base.group_user"/>
+            </xpath>
+        </field>
+    </record>
 
-    <field name="arch" type="xml">
-        <xpath expr="//header" position="inside">
-
-            <button name="%(action_report_mrp_real_cost)d"
-                    string="Imprimir Custos"
-                    type="action"
-                    class="btn-primary"/>
-
-        </xpath>
-    </field>
-</record>
+    <!-- Filtros de busca -->
+    <record id="view_mrp_real_cost_search" model="ir.ui.view">
+        <field name="name">mrp.real.cost.search</field>
+        <field name="model">mrp.real.cost.report</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="production_id"/>
+                <field name="product_id"/>
+                <field name="display_name"/>
+                <filter name="production_only" string="Apenas Ordens" domain="[('cost_type','=','production')]"/>
+                <filter name="components_only" string="Apenas Componentes" domain="[('cost_type','=','component')]"/>
+                <filter name="labor_only" string="Apenas Mão de Obra" domain="[('cost_type','=','labor')]"/>
+                <separator/>
+                <filter name="positive_variance" string="Variação Positiva" domain="[('variance_cost','>',0)]"/>
+                <filter name="negative_variance" string="Variação Negativa" domain="[('variance_cost','<',0)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_product" string="Produto" context="{'group_by':'product_id'}"/>
+                    <filter name="group_cost_type" string="Tipo de Custo" context="{'group_by':'cost_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
 
 </odoo>

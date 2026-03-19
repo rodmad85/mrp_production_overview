@@ -11,22 +11,28 @@
 
                 <!-- BUSCA DAS LINHAS CORRETAS -->
                 <t t-set="lines"
-                   t-value="env['mrp.real.cost.report'].search([('production_id','=',doc.id)], order='production_path')"/>
+                   t-value="env['mrp.real.cost.report'].search([
+                       ('production_id','=',doc.id)
+                   ], order='production_path')"/>
 
                 <h3>
-                    <span t-esc="doc.name"/> -
-                    <span t-esc="doc.product_id.display_name"/>
+                    Ordem: <span t-esc="doc.name"/> -
+                    <span t-field="doc.product_id.display_name"/>
                 </h3>
+
+                <p>
+                    <strong>Data Finalização:</strong>
+                    <span t-field="doc.date_finished"/>
+                </p>
 
                 <table class="table table-sm table-bordered">
 
                     <thead>
                         <tr>
-                            <th>Tipo</th>
                             <th>Item</th>
-                            <th class="text-end">Qtd</th>
-                            <th class="text-end">Planejado</th>
-                            <th class="text-end">Real</th>
+                            <th class="text-end">Quantidade</th>
+                            <th class="text-end">Custo Planejado</th>
+                            <th class="text-end">Custo Real</th>
                             <th class="text-end">Variação</th>
                         </tr>
                     </thead>
@@ -35,29 +41,39 @@
 
                         <t t-foreach="lines" t-as="line">
 
-                            <tr>
+                            <tr t-att-class="'fw-bold' if line.cost_type in ['production','total'] else ''">
 
                                 <td>
-                                    <span t-esc="line.cost_type"/>
-                                </td>
-
-                                <td>
-                                    <span t-att-style="'margin-left:%spx' % (line.level * 20)"/>
+                                    <span t-att-style="'padding-left:%spx' % (line.level * 20)"/>
                                     <span t-esc="line.item_name"/>
+                                    <t t-if="line.cost_type == 'component'">
+                                        <br/>
+                                        <small class="text-muted">
+                                            Produto: <span t-field="line.product_id.display_name"/>
+                                        </small>
+                                    </t>
                                 </td>
 
                                 <td class="text-end">
-                                    <span t-esc="line.quantity"/>
+                                    <t t-if="line.quantity != 0">
+                                        <span t-esc="'%.3f' % line.quantity"/>
+                                        <t t-if="line.uom_id">
+                                            <span t-esc="' ' + line.uom_id.name"/>
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        -
+                                    </t>
                                 </td>
 
                                 <td class="text-end">
                                     <span t-field="line.planned_cost"
-                                          t-options='{"widget":"monetary","display_currency":doc.company_id.currency_id}'/>
+                                          t-options='{"widget":"monetary", "display_currency": doc.currency_id or doc.company_id.currency_id}'/>
                                 </td>
 
                                 <td class="text-end">
                                     <span t-field="line.real_cost"
-                                          t-options='{"widget":"monetary","display_currency":doc.company_id.currency_id}'/>
+                                          t-options='{"widget":"monetary", "display_currency": doc.currency_id or doc.company_id.currency_id}'/>
                                 </td>
 
                                 <td class="text-end">
@@ -68,7 +84,7 @@
                                         else ''">
 
                                         <span t-field="line.variance_cost"
-                                              t-options='{"widget":"monetary","display_currency":doc.company_id.currency_id}'/>
+                                              t-options='{"widget":"monetary", "display_currency": doc.currency_id or doc.company_id.currency_id}'/>
 
                                     </span>
 
@@ -79,6 +95,26 @@
                         </t>
 
                     </tbody>
+
+                    <!-- Linha de totais gerais -->
+                    <tfoot>
+                        <tr class="fw-bold bg-light">
+                            <td>TOTAIS GERAIS</td>
+                            <td class="text-end">-</td>
+                            <td class="text-end">
+                                <span t-esc="sum(lines.mapped('planned_cost'))"
+                                      t-options='{"widget":"monetary", "display_currency": doc.currency_id or doc.company_id.currency_id}'/>
+                            </td>
+                            <td class="text-end">
+                                <span t-esc="sum(lines.mapped('real_cost'))"
+                                      t-options='{"widget":"monetary", "display_currency": doc.currency_id or doc.company_id.currency_id}'/>
+                            </td>
+                            <td class="text-end">
+                                <span t-esc="sum(lines.mapped('variance_cost'))"
+                                      t-options='{"widget":"monetary", "display_currency": doc.currency_id or doc.company_id.currency_id}'/>
+                            </td>
+                        </tr>
+                    </tfoot>
 
                 </table>
 
