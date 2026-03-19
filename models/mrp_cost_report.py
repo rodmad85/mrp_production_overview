@@ -73,23 +73,16 @@ class MrpRealCostReport(models.Model):
             JOIN production_tree pt ON pt.id = child.parent_production_id
         ),
 
-        -- Custos dos componentes (matéria-prima) - VERSÃO CORRIGIDA
+        -- Custos dos componentes (matéria-prima) - VERSÃO SIMPLIFICADA
         component_costs AS (
             SELECT
                 sm.raw_material_production_id as production_id,
                 sm.product_id,
                 SUM(sm.quantity_done) as quantity_done,
                 SUM(COALESCE(svl.value, 0)) as real_cost,
-                SUM(sm.product_uom_qty * COALESCE(
-                    -- Tenta buscar do campo JSON (Odoo 18+)
-                    (ppt.standard_price::jsonb ->> pt.company_id::text)::numeric,
-                    -- Fallback para versões anteriores
-                    ppt.standard_price::numeric,
-                    0
-                )) as planned_cost
+                SUM(sm.product_uom_qty * COALESCE(pp.standard_price, 0)) as planned_cost
             FROM stock_move sm
             JOIN product_product pp ON pp.id = sm.product_id
-            JOIN product_template ppt ON ppt.id = pp.product_tmpl_id
             LEFT JOIN stock_valuation_layer svl ON svl.stock_move_id = sm.id
             JOIN production_tree pt ON pt.id = sm.raw_material_production_id
             WHERE sm.state = 'done'
@@ -155,7 +148,7 @@ class MrpRealCostReport(models.Model):
 
         UNION ALL
 
-        -- COMPONENTES (MATÉRIA-PRIMA) - VERSÃO CORRIGIDA
+        -- COMPONENTES (MATÉRIA-PRIMA) - VERSÃO SIMPLIFICADA
         SELECT
             (1000000 + sm.id)::bigint as id,
 
@@ -173,21 +166,11 @@ class MrpRealCostReport(models.Model):
             sm.quantity_done as quantity,
             sm.product_uom as uom_id,
 
-            (sm.product_uom_qty * COALESCE(
-                -- Tenta buscar do campo JSON (Odoo 18+)
-                (pt_tmpl.standard_price::jsonb ->> pt.company_id::text)::numeric,
-                -- Fallback para versões anteriores
-                pt_tmpl.standard_price::numeric,
-                0
-            )) as planned_cost,
+            (sm.product_uom_qty * COALESCE(pp.standard_price, 0)) as planned_cost,
 
             COALESCE(svl.value, 0.0) as real_cost,
 
-            COALESCE(svl.value, 0.0) - (sm.product_uom_qty * COALESCE(
-                (pt_tmpl.standard_price::jsonb ->> pt.company_id::text)::numeric,
-                pt_tmpl.standard_price::numeric,
-                0
-            )) as variance_cost,
+            COALESCE(svl.value, 0.0) - (sm.product_uom_qty * COALESCE(pp.standard_price, 0)) as variance_cost,
 
             pt.date_finished,
             COALESCE(pt_tmpl.name, 'Componente') as display_name,
