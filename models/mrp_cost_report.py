@@ -35,6 +35,7 @@ class MrpRealCostReport(models.Model):
     )
 
     date_finished = fields.Datetime("Finalização")
+    display_name = fields.Char("Descrição")
 
     def init(self):
         tools.drop_view_if_exists(self.env.cr, "mrp_real_cost_report")
@@ -49,28 +50,116 @@ class MrpRealCostReport(models.Model):
                 mp.id,
                 mp.parent_production_id,
                 mp.product_id,
-                mp.id as root_production_id,
                 1 as level,
                 LPAD(mp.id::text, 10, '0') as path
             FROM mrp_production mp
             WHERE mp.parent_production_id IS NULL
-        
+
             UNION ALL
-        
+
             SELECT
                 child.id,
                 child.parent_production_id,
                 child.product_id,
-                pt.root_production_id,
                 pt.level + 1,
                 pt.path || '.' || LPAD(child.id::text, 10, '0')
             FROM mrp_production child
             JOIN production_tree pt
                 ON pt.id = child.parent_production_id
+        ),
+
+        /* ========================= */
+        /* BASE DE CUSTOS            */
+        /* ========================= */
+
+        base_costs AS (
+
+            /* COMPONENTES */
+
+            SELECT
+                ptree.id as production_id,
+                'component' as cost_type,
+                ROUND(COALESCE(svl.value,0)::numeric,2) as real_cost
+
+            FROM stock_move sm
+            JOIN production_tree ptree ON ptree.id = sm.raw_material_production_id
+            LEFT JOIN stock_valuation_layer svl ON svl.stock_move_id = sm.id
+
+            WHERE sm.state = 'done'
+
+
+            UNION ALL
+
+            /* MÃO DE OBRA */
+
+            SELECT
+                ptree.id as production_id,
+                'labor' as cost_type,
+                ROUND(((wo.duration / 60.0) * wc.costs_hour)::numeric,2)
+
+            FROM mrp_workorder wo
+            JOIN production_tree ptree ON ptree.id = wo.production_id
+            JOIN mrp_workcenter wc ON wc.id = wo.workcenter_id
+
+            WHERE wo.state='done'
+        ),
+
+        /* ========================= */
+        /* CONSOLIDAÇÃO              */
+        /* ========================= */
+
+        aggregated_costs AS (
+
+            SELECT
+                ptree.id,
+                ptree.path,
+                SUM(CASE WHEN bc.cost_type='component' THEN bc.real_cost ELSE 0 END) as comp_cost,
+                SUM(CASE WHEN bc.cost_type='labor' THEN bc.real_cost ELSE 0 END) as labor_cost,
+                SUM(bc.real_cost) as total_cost
+
+            FROM production_tree ptree
+
+            LEFT JOIN base_costs bc
+                ON bc.production_id = ptree.id
+
+            GROUP BY ptree.id, ptree.path
         )
 
         /* ========================= */
-        /* COMPONENTES               */
+        /* LINHA DA OP               */
+        /* ========================= */
+
+        SELECT
+
+            mp.id + 200000000 as id,
+
+            ptree.id as production_id,
+            ptree.parent_production_id,
+            ptree.product_id,
+
+            ptree.level,
+            ptree.path as production_path,
+
+            'production' as cost_type,
+
+            repeat('   ', ptree.level-1) || mp.name as item_name,
+
+            0 as quantity,
+            0 as planned_cost,
+            0 as real_cost,
+            0 as variance_cost,
+
+            mp.date_finished
+
+        FROM production_tree ptree
+        JOIN mrp_production mp ON mp.id = ptree.id
+
+
+        UNION ALL
+
+
+        /* ========================= */
+        /* COMPONENTES DETALHE       */
         /* ========================= */
 
         SELECT
@@ -86,100 +175,69 @@ class MrpRealCostReport(models.Model):
 
             'component' as cost_type,
 
+            repeat('   ', ptree.level) ||
             COALESCE(pt.name->>'pt_BR', pt.name->>'en_US') as item_name,
 
-            sm.quantity_done as quantity,
+            sm.quantity_done,
 
-            ROUND((COALESCE(ip.value_float,0) * sm.quantity_done)::numeric,2) as planned_cost,
+            0 as planned_cost,
 
-            ROUND(COALESCE(svl.value,0)::numeric,2) as real_cost,
+            ROUND(COALESCE(svl.value,0)::numeric,2),
 
-            ROUND(
-                ROUND(COALESCE(svl.value,0)::numeric,2) -
-                ROUND((COALESCE(ip.value_float,0) * sm.quantity_done)::numeric,2)
-            ,2) as variance_cost,
+            0 as variance_cost,
 
             mp.date_finished
 
         FROM stock_move sm
-        
-        JOIN production_tree ptree
-            ON ptree.id = sm.raw_material_production_id
-        
-        JOIN mrp_production mp
-            ON mp.id = ptree.id
-        
-        JOIN product_product pp
-            ON pp.id = sm.product_id
-        
-        JOIN product_template pt
-            ON pt.id = pp.product_tmpl_id
-        
-        LEFT JOIN ir_property ip
-            ON ip.res_id = 'product.product,' || pp.id
-            AND ip.name = 'standard_price'
-        
-        LEFT JOIN stock_valuation_layer svl
-            ON svl.stock_move_id = sm.id
-        
-        WHERE sm.state = 'done'
-        
-        /* REMOVE APENAS COMPONENTES QUE VIRARAM OP FILHA */
-        
+        JOIN production_tree ptree ON ptree.id = sm.raw_material_production_id
+        JOIN mrp_production mp ON mp.id = ptree.id
+        JOIN product_product pp ON pp.id = sm.product_id
+        JOIN product_template pt ON pt.id = pp.product_tmpl_id
+        LEFT JOIN stock_valuation_layer svl ON svl.stock_move_id = sm.id
+
+        WHERE sm.state='done'
+
         AND NOT EXISTS (
-            SELECT 1
-            FROM mrp_production child
+            SELECT 1 FROM mrp_production child
             WHERE child.parent_production_id = mp.id
             AND child.product_id = sm.product_id
         )
+
 
         UNION ALL
 
 
         /* ========================= */
-        /* MÃO DE OBRA               */
+        /* TOTAL DA OP               */
         /* ========================= */
 
         SELECT
 
-            wo.id + 100000000 as id,
+            ac.id + 300000000 as id,
 
-            ptree.id as production_id,
-            ptree.parent_production_id,
-            ptree.product_id,
+            ac.id as production_id,
+            NULL,
+            NULL,
 
             ptree.level,
-            ptree.path as production_path,
+            ptree.path || '.999' as production_path,
 
-            'labor' as cost_type,
+            'total' as cost_type,
 
-            wc.name as item_name,
+            repeat('   ', ptree.level) || 'TOTAL OP',
 
-            wo.duration / 60.0 as quantity,
+            0,
 
-            ROUND(((wo.duration_expected / 60.0) * wc.costs_hour)::numeric,2) as planned_cost,
+            0,
 
-            ROUND(((wo.duration / 60.0) * wc.costs_hour)::numeric,2) as real_cost,
+            ac.total_cost,
 
-            ROUND(
-                ROUND(((wo.duration / 60.0) * wc.costs_hour)::numeric,2) -
-                ROUND(((wo.duration_expected / 60.0) * wc.costs_hour)::numeric,2)
-            ,2) as variance_cost,
+            0,
 
-            mp.date_finished
+            NULL
 
-        FROM mrp_workorder wo
-
-        JOIN production_tree ptree
-            ON ptree.id = wo.production_id
-
-        JOIN mrp_production mp
-            ON mp.id = ptree.id
-
-        JOIN mrp_workcenter wc
-            ON wc.id = wo.workcenter_id
-
-        WHERE wo.state='done'
+        FROM aggregated_costs ac
+        JOIN production_tree ptree ON ptree.id = ac.id
 
         )
 

@@ -5,12 +5,10 @@
         <field name="model">mrp.real.cost.report</field>
         <field name="arch" type="xml">
 
-            <tree string="Custos de Produção" default_order="production_path">
+            <tree default_order="production_path">
 
-                <field name="production_id"/>
-                <field name="product_id"/>
+                <field name="display_name"/>
                 <field name="cost_type"/>
-                <field name="item_name" options="{'indent_field': 'level'}"/>
                 <field name="quantity"/>
                 <field name="planned_cost" sum="Planejado"/>
                 <field name="real_cost" sum="Real"/>
