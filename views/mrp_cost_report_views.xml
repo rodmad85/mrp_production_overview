@@ -3,7 +3,6 @@
     <record id="view_mrp_real_cost_tree" model="ir.ui.view">
         <field name="name">mrp.real.cost.tree</field>
         <field name="model">mrp.real.cost.report</field>
-
         <field name="arch" type="xml">
 
             <tree string="Custos de Produção" default_order="production_path">
@@ -20,6 +19,16 @@
             </tree>
 
         </field>
+    </record>
+
+        <record id="action_report_mrp_real_cost" model="ir.actions.report">
+        <field name="name">Custos de Produção</field>
+        <field name="model">mrp.production</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">mrp_real_cost.report_mrp_real_cost</field>
+        <field name="report_file">mrp_real_cost.report_mrp_real_cost</field>
+        <field name="binding_model_id" ref="mrp.model_mrp_production"/>
+        <field name="binding_type">report</field>
     </record>
 
     <record id="mrp_production_form_cost_button" model="ir.ui.view">
