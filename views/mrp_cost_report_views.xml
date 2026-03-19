@@ -11,7 +11,7 @@
                 <field name="production_id"/>
                 <field name="product_id"/>
                 <field name="cost_type"/>
-                <field name="item_name"/>
+                <field name="item_name" options="{'indent_field': 'level'}"/>
                 <field name="quantity"/>
                 <field name="planned_cost" sum="Planejado"/>
                 <field name="real_cost" sum="Real"/>
@@ -21,5 +21,22 @@
 
         </field>
     </record>
+
+    <record id="mrp_production_form_cost_button" model="ir.ui.view">
+    <field name="name">mrp.production.cost.button</field>
+    <field name="model">mrp.production</field>
+    <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+
+    <field name="arch" type="xml">
+        <xpath expr="//header" position="inside">
+
+            <button name="%(action_report_mrp_real_cost)d"
+                    string="Imprimir Custos"
+                    type="action"
+                    class="btn-primary"/>
+
+        </xpath>
+    </field>
+</record>
 
 </odoo>

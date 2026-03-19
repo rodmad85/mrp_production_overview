@@ -6,7 +6,7 @@ class MrpRealCostReport(models.Model):
     _name = "mrp.real.cost.report"
     _description = "Relatório de Custos de Produção"
     _auto = False
-    _order = "production_path, cost_type"
+    _order = "production_path"
 
     production_id = fields.Many2one("mrp.production", string="Ordem")
     parent_production_id = fields.Many2one("mrp.production", string="OP Pai")
