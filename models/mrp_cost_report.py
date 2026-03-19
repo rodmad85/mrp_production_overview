@@ -73,29 +73,30 @@ class MrpRealCostReport(models.Model):
             JOIN production_tree pt ON pt.id = child.parent_production_id
         ),
 
-        -- Preços dos produtos (buscando do ir_property)
-        product_prices AS (
+        -- Buscar preços dos produtos da tabela ir_property
+        product_standard_prices AS (
             SELECT 
-                ip.res_id,
+                substring(ip.res_id FROM 'product.product,(\\d+)')::integer as product_id,
                 ip.value_float as standard_price,
-                substring(ip.res_id, 'product.product,(\\d+)')::integer as product_id
+                ip.company_id
             FROM ir_property ip
             WHERE ip.name = 'standard_price'
               AND ip.res_id LIKE 'product.product,%'
         ),
 
-        -- Custos dos componentes (matéria-prima) - CORRIGIDO com ir_property
+        -- Custos dos componentes (matéria-prima) - CORRIGIDO
         component_costs AS (
             SELECT
                 sm.raw_material_production_id as production_id,
                 sm.product_id,
                 SUM(sm.quantity_done) as quantity_done,
                 SUM(COALESCE(svl.value, 0)) as real_cost,
-                SUM(sm.product_uom_qty * COALESCE(pp.standard_price, 0)) as planned_cost
+                SUM(sm.product_uom_qty * COALESCE(psp.standard_price, 0)) as planned_cost
             FROM stock_move sm
-            JOIN product_product pp ON pp.id = sm.product_id
             LEFT JOIN stock_valuation_layer svl ON svl.stock_move_id = sm.id
             JOIN production_tree pt ON pt.id = sm.raw_material_production_id
+            LEFT JOIN product_standard_prices psp ON psp.product_id = sm.product_id 
+                AND (psp.company_id = pt.company_id OR psp.company_id IS NULL)
             WHERE sm.state = 'done'
               AND sm.raw_material_production_id IS NOT NULL
             GROUP BY sm.raw_material_production_id, sm.product_id
@@ -159,7 +160,7 @@ class MrpRealCostReport(models.Model):
 
         UNION ALL
 
-        -- COMPONENTES (MATÉRIA-PRIMA) - CORRIGIDO com product.standard_price (campo relacional)
+        -- COMPONENTES (MATÉRIA-PRIMA) - CORRIGIDO
         SELECT
             (1000000 + sm.id)::bigint as id,
 
@@ -177,11 +178,11 @@ class MrpRealCostReport(models.Model):
             sm.quantity_done as quantity,
             sm.product_uom as uom_id,
 
-            (sm.product_uom_qty * COALESCE(pp.standard_price, 0)) as planned_cost,
+            (sm.product_uom_qty * COALESCE(psp.standard_price, 0)) as planned_cost,
 
             COALESCE(svl.value, 0.0) as real_cost,
 
-            COALESCE(svl.value, 0.0) - (sm.product_uom_qty * COALESCE(pp.standard_price, 0)) as variance_cost,
+            COALESCE(svl.value, 0.0) - (sm.product_uom_qty * COALESCE(psp.standard_price, 0)) as variance_cost,
 
             pt.date_finished,
             COALESCE(pt_tmpl.name, 'Componente') as display_name,
@@ -192,6 +193,8 @@ class MrpRealCostReport(models.Model):
         JOIN product_product pp ON pp.id = sm.product_id
         JOIN product_template pt_tmpl ON pt_tmpl.id = pp.product_tmpl_id
         LEFT JOIN stock_valuation_layer svl ON svl.stock_move_id = sm.id
+        LEFT JOIN product_standard_prices psp ON psp.product_id = sm.product_id 
+            AND (psp.company_id = pt.company_id OR psp.company_id IS NULL)
         WHERE sm.state = 'done'
           AND sm.raw_material_production_id IS NOT NULL
 
