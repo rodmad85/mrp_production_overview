@@ -37,6 +37,7 @@ class MrpRealCostReport(models.Model):
 
     date_finished = fields.Datetime("Finalização")
     display_name = fields.Char("Descrição")
+    company_id = fields.Many2one('res.company', string='Empresa')
 
     def init(self):
         tools.drop_view_if_exists(self.env.cr, "mrp_real_cost_report")
@@ -80,9 +81,10 @@ class MrpRealCostReport(models.Model):
                 sm.product_id,
                 SUM(sm.quantity_done) as quantity_done,
                 SUM(COALESCE(svl.value, 0)) as real_cost,
-                SUM(sm.product_uom_qty * pp.standard_price) as planned_cost
+                SUM(sm.product_uom_qty * pt.standard_price) as planned_cost
             FROM stock_move sm
             JOIN product_product pp ON pp.id = sm.product_id
+            JOIN product_template pt ON pt.id = pp.product_tmpl_id
             LEFT JOIN stock_valuation_layer svl ON svl.stock_move_id = sm.id
             WHERE sm.state = 'done'
               AND sm.raw_material_production_id IS NOT NULL
@@ -127,20 +129,20 @@ class MrpRealCostReport(models.Model):
             pt.level,
             pt.path as production_path,
 
-            'production' as cost_type,
+            'production'::varchar as cost_type,
 
             repeat('   ', pt.level-1) || pt.name as item_name,
 
-            1 as quantity,
-            (SELECT uom_id FROM product_product WHERE id = pt.product_id LIMIT 1) as uom_id,
+            1.0 as quantity,
+            NULL::int as uom_id,
 
-            COALESCE(ot.total_planned, 0) as planned_cost,
-            COALESCE(ot.total_real, 0) as real_cost,
-            COALESCE(ot.total_real - ot.total_planned, 0) as variance_cost,
+            COALESCE(ot.total_planned, 0.0) as planned_cost,
+            COALESCE(ot.total_real, 0.0) as real_cost,
+            COALESCE(ot.total_real - ot.total_planned, 0.0) as variance_cost,
 
             pt.date_finished,
             pt.name as display_name,
-            pt.company_id as company_id
+            pt.company_id
 
         FROM production_tree pt
         LEFT JOIN order_totals ot ON ot.id = pt.id
@@ -158,16 +160,16 @@ class MrpRealCostReport(models.Model):
             pt.level,
             pt.path || '.' || LPAD(sm.id::text, 10, '0') as production_path,
 
-            'component' as cost_type,
+            'component'::varchar as cost_type,
 
             repeat('   ', pt.level) || COALESCE(pt_tmpl.name, 'Componente') as item_name,
 
             sm.quantity_done as quantity,
             sm.product_uom as uom_id,
 
-            (sm.product_uom_qty * pp.standard_price) as planned_cost,
-            COALESCE(svl.value, 0) as real_cost,
-            COALESCE(svl.value, 0) - (sm.product_uom_qty * pp.standard_price) as variance_cost,
+            (sm.product_uom_qty * pt_tmpl.standard_price) as planned_cost,
+            COALESCE(svl.value, 0.0) as real_cost,
+            COALESCE(svl.value, 0.0) - (sm.product_uom_qty * pt_tmpl.standard_price) as variance_cost,
 
             pt.date_finished,
             COALESCE(pt_tmpl.name, 'Componente') as display_name,
@@ -194,12 +196,12 @@ class MrpRealCostReport(models.Model):
             pt.level,
             pt.path || '.' || LPAD(wo.id::text, 10, '0') as production_path,
 
-            'labor' as cost_type,
+            'labor'::varchar as cost_type,
 
             repeat('   ', pt.level) || 'Mão de Obra: ' || wo.name as item_name,
 
-            wo.duration / 60.0 as quantity,
-            (SELECT id FROM uom_uom WHERE uom_type = 'reference' LIMIT 1) as uom_id,
+            (wo.duration / 60.0) as quantity,
+            NULL::int as uom_id,
 
             (wo.duration_expected / 60.0) * wc.costs_hour as planned_cost,
             (wo.duration / 60.0) * wc.costs_hour as real_cost,
@@ -227,12 +229,12 @@ class MrpRealCostReport(models.Model):
             pt.level,
             pt.path || '.999' as production_path,
 
-            'total' as cost_type,
+            'total'::varchar as cost_type,
 
             repeat('   ', pt.level) || 'TOTAL DA ORDEM' as item_name,
 
-            0 as quantity,
-            NULL as uom_id,
+            0.0 as quantity,
+            NULL::int as uom_id,
 
             ot.total_planned as planned_cost,
             ot.total_real as real_cost,
