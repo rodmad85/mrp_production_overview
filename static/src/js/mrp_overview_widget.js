@@ -260,7 +260,7 @@
 
 import { registry }      from "@web/core/registry";
 import { useService }    from "@web/core/utils/hooks";
-import { Component, onMounted, onWillUnmount, xml, useState } from "@odoo/owl";
+import { Component, onMounted, onWillUnmount, xml } from "@odoo/owl";
 
 // ── Utilitários ──────────────────────────────────────────────────────────────
 
@@ -452,7 +452,6 @@ export class MrpProductionOverview extends Component {
         this.rpc          = useService('rpc');
         this.notification = useService('notification');
         this.actionService = useService('action');
-        this.action       = useService('action');
         this.orders       = [];
         this.chartData    = null;
         this.searchTerm   = '';
@@ -857,7 +856,12 @@ export class MrpProductionOverview extends Component {
                 kwargs: {},
             });
 
-            await this.actionService.doAction(reportAction);
+            if (this.actionService) {
+                await this.actionService.doAction(reportAction);
+            } else {
+                // Fallback caso actionService nao disponivel
+                window.location.href = `/report/pdf/mrp_production_overview.report_production_overview/${recId}`;
+            }
 
         } catch (e) {
             console.error('Erro ao gerar relatório:', e);
