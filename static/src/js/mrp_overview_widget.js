@@ -258,9 +258,9 @@
     document.head.appendChild(style);
 })();
 
-import { registry }    from "@web/core/registry";
-import { useService }  from "@web/core/utils/hooks";
-import { Component, onMounted, onWillUnmount, useState, xml } from "@odoo/owl";
+import { registry }      from "@web/core/registry";
+import { useService }    from "@web/core/utils/hooks";
+import { Component, onMounted, onWillUnmount, xml, useState } from "@odoo/owl";
 
 // ── Utilitários ──────────────────────────────────────────────────────────────
 
@@ -451,6 +451,8 @@ export class MrpProductionOverview extends Component {
     setup() {
         this.rpc          = useService('rpc');
         this.notification = useService('notification');
+        this.actionService = useService('action');
+        this.action       = useService('action');
         this.orders       = [];
         this.chartData    = null;
         this.searchTerm   = '';
@@ -832,76 +834,30 @@ export class MrpProductionOverview extends Component {
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
 
         try {
-            // 1. Cria o registro transiente com os filtros atuais.
-            //    Usamos fetch direto para capturar o csrf_token do header
-            //    de resposta que o Odoo devolve em toda chamada JSON-RPC.
-            const rpcBody = JSON.stringify({
-                jsonrpc: '2.0', method: 'call', id: 1,
-                params: {
-                    model:  'mrp.production.overview',
-                    method: 'create',
-                    args:   [{
-                        date_from:    this.dateFrom    || false,
-                        date_to:      this.dateTo      || false,
-                        state_filter: this.stateFilter || 'all',
-                    }],
-                    kwargs: {},
-                },
+            // 1. Cria o registro transiente com os filtros atuais
+            const recId = await this.rpc('/web/dataset/call_kw', {
+                model:  'mrp.production.overview',
+                method: 'create',
+                args:   [{
+                    date_from:    this.dateFrom    || false,
+                    date_to:      this.dateTo      || false,
+                    state_filter: this.stateFilter || 'all',
+                }],
+                kwargs: {},
             });
 
-            const rpcResp = await fetch('/web/dataset/call_kw', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    rpcBody,
+            // 2. Chama action_print_report no Python, que usa report_action()
+            //    — o mesmo método que o Odoo usa nos botões de impressão nativos.
+            //    Retorna um dict ir.actions.report que o actionService processa,
+            //    e o prt_report_attachment_preview intercepta normalmente.
+            const reportAction = await this.rpc('/web/dataset/call_kw', {
+                model:  'mrp.production.overview',
+                method: 'action_print_report',
+                args:   [[recId]],
+                kwargs: {},
             });
 
-            const rpcData = await rpcResp.json();
-            if (rpcData.error) throw new Error(rpcData.error.data?.message || rpcData.error.message);
-            const recId = rpcData.result;
-
-            // 2. O Odoo define o csrf_token no cookie 'csrf_token' (httpOnly=False)
-            //    após qualquer requisição autenticada.
-            const csrfToken = document.cookie
-                .split(';')
-                .map(c => c.trim())
-                .find(c => c.startsWith('csrf_token='))
-                ?.slice('csrf_token='.length)
-                // Odoo 16: o token também fica no objeto global odoo
-                || (typeof odoo !== 'undefined'
-                    ? (odoo.csrf_token || odoo.__csrf_token__ || '')
-                    : '');
-
-            // 3. Submete form POST para /report/download — exatamente como
-            //    o Odoo faz ao clicar em "Imprimir" em qualquer vista.
-            //    O prt_report_attachment_preview intercepta e exibe na tela.
-            const form = document.createElement('form');
-            form.method  = 'POST';
-            form.action  = '/report/download';
-            form.target  = '_blank';
-            form.style.display = 'none';
-
-            const addInput = (name, val) => {
-                const el = document.createElement('input');
-                el.type  = 'hidden';
-                el.name  = name;
-                el.value = val;
-                form.appendChild(el);
-            };
-
-            // O payload de /report/download no Odoo é uma lista:
-            // [report_name, report_type, docids, context]
-            // conforme esperado por report_xlsx e prt_report_attachment_preview
-            addInput('data', JSON.stringify([
-                'mrp_production_overview.report_production_overview',
-                'qweb-pdf',
-                { active_ids: [recId], active_model: 'mrp.production.overview' },
-            ]));
-            addInput('token',      String(new Date().getTime()));
-            addInput('csrf_token', csrfToken);
-
-            document.body.appendChild(form);
-            form.submit();
-            setTimeout(() => form.remove(), 5000);
+            await this.actionService.doAction(reportAction);
 
         } catch (e) {
             console.error('Erro ao gerar relatório:', e);

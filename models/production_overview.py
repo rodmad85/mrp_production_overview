@@ -310,6 +310,17 @@ class MrpProductionOverview(models.TransientModel):
             'target': 'current',
         }
 
+    def action_print_report(self):
+        """
+        Retorna a action do relatório para o cliente.
+        Chamado pelo JS via doAction — o prt_report_attachment_preview
+        intercepta e abre o visualizador integrado normalmente.
+        """
+        self.ensure_one()
+        return self.env.ref(
+            'mrp_production_overview.action_report_mrp_production_overview'
+        ).report_action(self)
+
     # ── Relatório PDF ────────────────────────────────────────────────────────
 
     def _fmt_cost(self, v):
