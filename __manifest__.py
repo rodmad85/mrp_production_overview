@@ -1,19 +1,36 @@
+# -*- coding: utf-8 -*-
 {
-    "name": "MRP Real Production Cost",
-    "version": "16.0.1.0.0",
-    "depends": [
-        "mrp",
-        "stock",
-        "product"
-    ],
-    "author": "Rodrigo A. Madureira",
-    "category": "Manufacturing",
-    "data": [
-        "security/ir.model.access.csv",
-        "views/mrp_cost_report_views.xml",
-        "report/mrp_cost_report_template.xml",
-        "views/mrp_cost_menu.xml",
+    'name': 'MRP Production Overview - Consumo de Materiais',
+    'version': '16.0.1.0.0',
+    'category': 'Manufacturing',
+    'summary': 'Visão geral das Ordens de Produção com consumo previsto vs realizado (MRP)',
+    'description': """
+Visualização completa do consumo de materiais das Ordens de Produção,
+comparando o consumo previsto (Lista de Materiais) com o consumo realizado
+registrado no módulo MRP do Odoo 16 Community Edition.
 
+Funcionalidades:
+
+- KPIs: total de ordens, componentes, eficiência de consumo
+- Tabela detalhada por Ordem de Produção com expand de componentes
+- Gráfico de barras: previsto vs realizado por produto
+- Indicadores de desvio (%) com alertas visuais
+- Filtros por status, período e produto
+    """,
+    'author': 'Customização Odoo CE',
+    'depends': ['mrp', 'stock'],
+    'data': [
+        'security/ir.model.access.csv',
+        'views/mrp_production_overview_views.xml',
+        'views/mrp_production_overview_menus.xml',
     ],
-    "installable": True,
+    'assets': {
+        'web.assets_backend': [
+            'mrp_production_overview/static/src/js/mrp_overview_widget.js',
+        ],
+    },
+    'installable': True,
+    'auto_install': False,
+    'application': False,
+    'license': 'LGPL-3',
 }

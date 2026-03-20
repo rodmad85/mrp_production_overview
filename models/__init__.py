@@ -1,1 +1,2 @@
-from . import mrp_cost_report
+# -*- coding: utf-8 -*-
+from . import mrp_production_overview
