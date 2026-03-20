@@ -13,14 +13,15 @@ Funcionalidades:
 
 - KPIs: total de ordens, componentes, eficiência de consumo
 - Tabela detalhada por Ordem de Produção com expand de componentes
-- Gráfico de barras: previsto vs realizado por produto
-- Indicadores de desvio (%) com alertas visuais
+- Custos de componentes e ordens de serviço
+- Relatório PDF para impressão
 - Filtros por status, período e produto
     """,
     'author': 'Customização Odoo CE',
     'depends': ['mrp', 'stock'],
     'data': [
         'security/ir.model.access.csv',
+        'report/report_production_overview.xml',
         'views/mrp_production_overview_views.xml',
         'views/mrp_production_overview_menus.xml',
     ],

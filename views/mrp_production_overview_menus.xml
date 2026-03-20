@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Menu raiz no módulo Fabricação -->
+    <menuitem
+        id="menu_mrp_production_overview_root"
+        name="Visão Geral de Consumo"
+        parent="mrp.menu_mrp_root"
+        sequence="5"
+    />
+
+    <!-- Submenu -->
+    <menuitem
+        id="menu_mrp_production_overview"
+        name="Consumo Previsto vs Realizado"
+        parent="menu_mrp_production_overview_root"
+        action="action_mrp_production_overview"
+        sequence="1"
+    />
+
+    <!-- Atalho direto no menu de relatórios MRP (se existir) -->
+    <menuitem
+        id="menu_mrp_production_overview_reports"
+        name="Consumo de Materiais (OP)"
+        parent="mrp.menu_mrp_reporting"
+        action="action_mrp_production_overview"
+        sequence="20"
+    />
+
+</odoo>

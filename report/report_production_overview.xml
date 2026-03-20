@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Ação do relatório PDF -->
+    <record id="action_report_mrp_production_overview" model="ir.actions.report">
+        <field name="name">Visão Geral de Consumo</field>
+        <field name="model">mrp.production.overview</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">mrp_production_overview.report_production_overview</field>
+        <field name="report_file">mrp_production_overview.report_production_overview</field>
+        <field name="print_report_name">'Visão Geral de Consumo - ' + (object.date_from and object.date_from.strftime('%d/%m/%Y') or '') + ' a ' + (object.date_to and object.date_to.strftime('%d/%m/%Y') or '')</field>
+        <field name="binding_model_id" ref="model_mrp_production_overview"/>
+    </record>
+
+    <!-- Template QWeb do relatório -->
+    <template id="report_production_overview">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <t t-foreach="docs" t-as="o">
+                    <t t-set="data" t-value="o._get_report_data()"/>
+                    <div class="page">
+
+                        <!-- Cabeçalho -->
+                        <div style="margin-bottom: 20px; border-bottom: 2px solid #714b67; padding-bottom: 12px;">
+                            <h2 style="color: #714b67; margin: 0 0 4px 0; font-size: 18px;">
+                                Visão Geral de Consumo — Ordens de Produção
+                            </h2>
+                            <p style="margin: 0; color: #6c757d; font-size: 11px;">
+                                Período: <strong><t t-esc="data['periodo']"/></strong>
+                                <t t-if="data['filtro_status']">
+                                    &#160;·&#160; Status: <strong><t t-esc="data['filtro_status']"/></strong>
+                                </t>
+                                &#160;·&#160; Gerado em: <strong><t t-esc="data['gerado_em']"/></strong>
+                            </p>
+                        </div>
+
+                        <!-- KPIs resumo -->
+                        <table style="width:100%; margin-bottom:16px; border-collapse:collapse;">
+                            <tr>
+                                <td style="width:16%; padding:10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; text-align:center;">
+                                    <div style="font-size:18px; font-weight:700; color:#212529;"><t t-esc="data['kpis']['total_orders']"/></div>
+                                    <div style="font-size:9px; color:#6c757d; text-transform:uppercase; letter-spacing:.05em;">Ordens</div>
+                                </td>
+                                <td style="width:4%;"></td>
+                                <td style="width:16%; padding:10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; text-align:center;">
+                                    <div style="font-size:18px; font-weight:700; color:#212529;"><t t-esc="data['kpis']['total_components']"/></div>
+                                    <div style="font-size:9px; color:#6c757d; text-transform:uppercase; letter-spacing:.05em;">Componentes</div>
+                                </td>
+                                <td style="width:4%;"></td>
+                                <td style="width:16%; padding:10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; text-align:center;">
+                                    <div style="font-size:18px; font-weight:700; color:#28a745;"><t t-esc="data['kpis']['global_efficiency']"/>%</div>
+                                    <div style="font-size:9px; color:#6c757d; text-transform:uppercase; letter-spacing:.05em;">Eficiência</div>
+                                </td>
+                                <td style="width:4%;"></td>
+                                <td style="width:16%; padding:10px; background:#fff3cd; border:1px solid #ffc107; border-radius:4px; text-align:center;">
+                                    <div style="font-size:18px; font-weight:700; color:#856404;"><t t-esc="data['kpis']['orders_with_deviation']"/></div>
+                                    <div style="font-size:9px; color:#856404; text-transform:uppercase; letter-spacing:.05em;">Com Desvio &gt;5%</div>
+                                </td>
+                                <td style="width:4%;"></td>
+                                <td style="width:20%; padding:10px; background:#e8d5e8; border:1px solid #714b67; border-radius:4px; text-align:center;">
+                                    <div style="font-size:16px; font-weight:700; color:#714b67;"><t t-esc="data['kpis']['grand_total_cost_fmt']"/></div>
+                                    <div style="font-size:9px; color:#714b67; text-transform:uppercase; letter-spacing:.05em;">Custo Total</div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Resumo de custos -->
+                        <table style="width:100%; margin-bottom:16px; border-collapse:collapse; border:1px solid #dee2e6;">
+                            <thead>
+                                <tr style="background:#714b67; color:#fff;">
+                                    <th style="padding:7px 10px; font-size:10px; text-align:left;">Custo Previsto (comp.)</th>
+                                    <th style="padding:7px 10px; font-size:10px; text-align:right;">Custo Realizado (comp.)</th>
+                                    <th style="padding:7px 10px; font-size:10px; text-align:right;">Δ Custo Componentes</th>
+                                    <th style="padding:7px 10px; font-size:10px; text-align:right;">Custo Mão de Obra</th>
+                                    <th style="padding:7px 10px; font-size:10px; text-align:right;">Total Geral</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding:8px 10px; font-size:12px; border-top:1px solid #dee2e6;"><t t-esc="data['kpis']['total_cost_planned_fmt']"/></td>
+                                    <td style="padding:8px 10px; font-size:12px; font-weight:600; text-align:right; border-top:1px solid #dee2e6;"><t t-esc="data['kpis']['total_cost_done_fmt']"/></td>
+                                    <td style="padding:8px 10px; font-size:12px; font-weight:600; text-align:right; border-top:1px solid #dee2e6;">
+                                        <span t-attf-style="color: {{ data['kpis']['cost_dev_color'] }};">
+                                            <t t-esc="data['kpis']['total_cost_deviation_fmt']"/>
+                                        </span>
+                                    </td>
+                                    <td style="padding:8px 10px; font-size:12px; text-align:right; border-top:1px solid #dee2e6; color:#007bff;"><t t-esc="data['kpis']['total_wo_cost_fmt']"/></td>
+                                    <td style="padding:8px 10px; font-size:13px; font-weight:700; text-align:right; border-top:1px solid #dee2e6; color:#714b67;"><t t-esc="data['kpis']['grand_total_cost_fmt']"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Tabela de ordens -->
+                        <h4 style="color:#212529; font-size:12px; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #dee2e6; padding-bottom:6px;">
+                            Detalhamento por Ordem de Produção
+                        </h4>
+                        <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:20px;">
+                            <thead>
+                                <tr style="background:#f8f9fa;">
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:left; color:#6c757d;">Ordem</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:left; color:#6c757d;">Produto</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:center; color:#6c757d;">Status</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:center; color:#6c757d;">Data Plan.</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Prev. (un.)</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Real. (un.)</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Desvio %</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Custo Comp.</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Custo OS</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="data['orders']" t-as="order">
+                                    <!-- Linha da OP pai -->
+                                    <tr t-attf-style="background: {{ '#fafafa' if order_index % 2 == 0 else '#fff' }};">
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; font-weight:600;">
+                                            <t t-esc="order['name']"/>
+                                            <t t-if="order['has_children']">
+                                                <span style="font-size:9px; color:#714b67;"> ⚙<t t-esc="len(order['children_info'])"/>f</span>
+                                            </t>
+                                        </td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6;">
+                                            <t t-esc="order['product_name']"/>
+                                            <t t-if="order['product_ref']">
+                                                <br/><span style="font-size:9px; color:#adb5bd;">[<t t-esc="order['product_ref']"/>]</span>
+                                            </t>
+                                        </td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:center;">
+                                            <span t-attf-style="font-size:9px; font-weight:600; padding:2px 6px; border-radius:10px; background:{{ order['status_bg'] }}; color:{{ order['status_color'] }};">
+                                                <t t-esc="order['state_label']"/>
+                                            </span>
+                                        </td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:center; color:#6c757d;"><t t-esc="order['date_planned']"/></td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right;"><t t-esc="order['planned_fmt']"/></td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right;"><t t-esc="order['done_fmt']"/></td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right;">
+                                            <span t-attf-style="font-weight:600; color:{{ order['dev_color'] }};">
+                                                <t t-esc="order['deviation_fmt']"/>
+                                            </span>
+                                        </td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right;"><t t-esc="order['cost_done_fmt']"/></td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right; color:#007bff;"><t t-esc="order['wo_cost_fmt']"/></td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right; font-weight:700; color:#714b67;"><t t-esc="order['total_cost_fmt']"/></td>
+                                    </tr>
+
+                                    <!-- Componentes da OP (sub-linha) -->
+                                    <t t-if="order['components']">
+                                        <tr>
+                                            <td colspan="10" style="padding:0; border:1px solid #dee2e6; background:#f8f9fa;">
+                                                <table style="width:100%; border-collapse:collapse; font-size:9px;">
+                                                    <tr style="background:#e8d5e8;">
+                                                        <td style="padding:3px 8px 3px 24px; color:#714b67; font-weight:600; width:25%;">Componente</td>
+                                                        <td style="padding:3px 8px; color:#714b67; width:10%;">Origem</td>
+                                                        <td style="padding:3px 8px; color:#714b67; text-align:right; width:10%;">Prev.</td>
+                                                        <td style="padding:3px 8px; color:#714b67; text-align:right; width:10%;">Real.</td>
+                                                        <td style="padding:3px 8px; color:#714b67; text-align:right; width:9%;">Desv.%</td>
+                                                        <td style="padding:3px 8px; color:#714b67; text-align:right; width:12%;">Custo Unit.</td>
+                                                        <td style="padding:3px 8px; color:#714b67; text-align:right; width:12%;">Custo Prev.</td>
+                                                        <td style="padding:3px 8px; color:#714b67; text-align:right; width:12%;">Custo Real.</td>
+                                                    </tr>
+                                                    <t t-foreach="order['components']" t-as="comp">
+                                                        <tr t-attf-style="background: {{ '#fff' if comp_index % 2 == 0 else '#fafafa' }};">
+                                                            <td style="padding:3px 8px 3px 24px; color:#212529;">
+                                                                <t t-esc="comp['product_name']"/>
+                                                                <t t-if="comp['product_ref']">
+                                                                    <span style="color:#adb5bd;"> [<t t-esc="comp['product_ref']"/>]</span>
+                                                                </t>
+                                                            </td>
+                                                            <td style="padding:3px 8px; color:#714b67;">
+                                                                <t t-if="comp['from_child']">⚙ <t t-esc="comp['from_child']"/></t>
+                                                                <t t-else="">— pai</t>
+                                                            </td>
+                                                            <td style="padding:3px 8px; text-align:right; color:#495057;"><t t-esc="comp['planned_fmt']"/></td>
+                                                            <td style="padding:3px 8px; text-align:right; color:#495057;"><t t-esc="comp['done_fmt']"/></td>
+                                                            <td style="padding:3px 8px; text-align:right;">
+                                                                <span t-attf-style="color:{{ comp['dev_color'] }}; font-weight:600;">
+                                                                    <t t-esc="comp['deviation_fmt']"/>
+                                                                </span>
+                                                            </td>
+                                                            <td style="padding:3px 8px; text-align:right; color:#6c757d;"><t t-esc="comp['unit_cost_fmt']"/></td>
+                                                            <td style="padding:3px 8px; text-align:right; color:#495057;"><t t-esc="comp['cost_planned_fmt']"/></td>
+                                                            <td style="padding:3px 8px; text-align:right; font-weight:600; color:#212529;"><t t-esc="comp['cost_done_fmt']"/></td>
+                                                        </tr>
+                                                    </t>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </t>
+
+                                    <!-- Ordens de Serviço (se houver) -->
+                                    <t t-if="order['workorders']">
+                                        <tr>
+                                            <td colspan="10" style="padding:0; border:1px solid #dee2e6; background:#f0f4ff;">
+                                                <table style="width:100%; border-collapse:collapse; font-size:9px;">
+                                                    <tr style="background:#cce5ff;">
+                                                        <td style="padding:3px 8px 3px 24px; color:#004085; font-weight:600; width:25%;">Operação (OS)</td>
+                                                        <td style="padding:3px 8px; color:#004085; width:20%;">Centro de Trabalho</td>
+                                                        <td style="padding:3px 8px; color:#004085; text-align:right; width:12%;">Hs Prev.</td>
+                                                        <td style="padding:3px 8px; color:#004085; text-align:right; width:12%;">Hs Reais</td>
+                                                        <td style="padding:3px 8px; color:#004085; text-align:right; width:10%;">Desv.%</td>
+                                                        <td style="padding:3px 8px; color:#004085; text-align:right; width:10%;">Custo/h</td>
+                                                        <td style="padding:3px 8px; color:#004085; text-align:right; width:11%;">Custo Total</td>
+                                                    </tr>
+                                                    <t t-foreach="order['workorders']" t-as="wo">
+                                                        <tr t-attf-style="background: {{ '#fff' if wo_index % 2 == 0 else '#f0f4ff' }};">
+                                                            <td style="padding:3px 8px 3px 24px; color:#212529; font-weight:500;"><t t-esc="wo['name']"/></td>
+                                                            <td style="padding:3px 8px; color:#6c757d;"><t t-esc="wo['workcenter']"/></td>
+                                                            <td style="padding:3px 8px; text-align:right; color:#495057;"><t t-esc="wo['planned_hours_fmt']"/>h</td>
+                                                            <td style="padding:3px 8px; text-align:right; color:#495057;"><t t-esc="wo['real_hours_fmt']"/>h</td>
+                                                            <td style="padding:3px 8px; text-align:right;">
+                                                                <span t-attf-style="color:{{ wo['dev_color'] }}; font-weight:600;">
+                                                                    <t t-esc="wo['deviation_fmt']"/>
+                                                                </span>
+                                                            </td>
+                                                            <td style="padding:3px 8px; text-align:right; color:#6c757d;"><t t-esc="wo['cost_per_hour_fmt']"/>/h</td>
+                                                            <td style="padding:3px 8px; text-align:right; font-weight:600; color:#007bff;"><t t-esc="wo['total_cost_fmt']"/></td>
+                                                        </tr>
+                                                    </t>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </t>
+
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <!-- Top 15 componentes -->
+                        <h4 style="color:#212529; font-size:12px; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #dee2e6; padding-bottom:6px;">
+                            Top 15 Componentes por Custo Realizado
+                        </h4>
+                        <table style="width:100%; border-collapse:collapse; font-size:10px;">
+                            <thead>
+                                <tr style="background:#f8f9fa;">
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:center; width:5%; color:#6c757d;">#</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:left; color:#6c757d;">Componente</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Qtd. Prevista</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Qtd. Realizada</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Un.</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Custo Previsto</th>
+                                    <th style="padding:6px 8px; border:1px solid #dee2e6; text-align:right; color:#6c757d;">Custo Realizado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="data['top_components']" t-as="tc">
+                                    <tr t-attf-style="background: {{ '#fafafa' if tc_index % 2 == 0 else '#fff' }};">
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:center; font-weight:700; color:#adb5bd;"><t t-esc="tc_index + 1"/></td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; font-weight:500;">
+                                            <t t-esc="tc['name']"/>
+                                            <t t-if="tc['ref']"><span style="color:#adb5bd; font-size:9px;"> [<t t-esc="tc['ref']"/>]</span></t>
+                                        </td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right;"><t t-esc="tc['planned_fmt']"/></td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right;"><t t-esc="tc['done_fmt']"/></td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right; color:#adb5bd;"><t t-esc="tc['uom']"/></td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right;"><t t-esc="tc['cost_planned_fmt']"/></td>
+                                        <td style="padding:5px 8px; border:1px solid #dee2e6; text-align:right; font-weight:700; color:#714b67;"><t t-esc="tc['cost_done_fmt']"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>
