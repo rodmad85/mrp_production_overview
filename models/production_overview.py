@@ -366,83 +366,90 @@ class MrpProductionOverview(models.TransientModel):
         return styles.get(state, ('#e2e3e5', '#383d41'))
 
     def _get_report_data(self):
-        """Prepara todos os dados formatados para o template QWeb."""
-        from datetime import datetime
+        """Prepara todos os dados formatados para o template QWeb.
 
+        LÓGICA DE FILTRAGEM:
+        - top_components (seção "Top 15 Componentes"): Apenas componentes do gráfico
+        - orders_fmt (seção "Detalhamento das Ordens"): TODOS os componentes (sem filtro)
+        """
+        from datetime import datetime
         # Reutiliza a lógica existente
         domain = []
         data = self.get_overview_data(domain=[])
-
         kpis = data['kpis']
         chart = data['chart_data']
 
         # Formata KPIs
         cost_dev = kpis['total_cost_deviation']
         kpis_fmt = dict(kpis)
-        kpis_fmt['total_cost_planned_fmt']   = self._fmt_cost(kpis['total_cost_planned'])
-        kpis_fmt['total_cost_done_fmt']      = self._fmt_cost(kpis['total_cost_done'])
+        kpis_fmt['total_cost_planned_fmt'] = self._fmt_cost(kpis['total_cost_planned'])
+        kpis_fmt['total_cost_done_fmt'] = self._fmt_cost(kpis['total_cost_done'])
         kpis_fmt['total_cost_deviation_fmt'] = ('+' if cost_dev >= 0 else '') + self._fmt_cost(cost_dev)
-        kpis_fmt['cost_dev_color']           = self._dev_color(cost_dev)
-        kpis_fmt['total_wo_cost_fmt']        = self._fmt_cost(kpis['total_wo_cost'])
-        kpis_fmt['grand_total_cost_fmt']     = self._fmt_cost(kpis['grand_total_cost'])
-        kpis_fmt['global_efficiency']        = '{:.1f}'.format(kpis['global_efficiency'])
+        kpis_fmt['cost_dev_color'] = self._dev_color(cost_dev)
+        kpis_fmt['total_wo_cost_fmt'] = self._fmt_cost(kpis['total_wo_cost'])
+        kpis_fmt['grand_total_cost_fmt'] = self._fmt_cost(kpis['grand_total_cost'])
+        kpis_fmt['global_efficiency'] = '{:.1f}'.format(kpis['global_efficiency'])
 
-        # Formata ordens
+        # ─── FORMATA ORDENS ─────────────────────────────────
+        # MANTÉM TODOS OS COMPONENTES, SEM FILTRO
         orders_fmt = []
         for o in data['orders']:
             status_bg, status_color = self._status_style(o['state'])
             dev_color = self._dev_color(o['deviation_pct'])
 
-            # Formata componentes
+            # Formata componentes - SEM FILTRO, todos os componentes da ordem
             comps_fmt = []
             for c in o.get('components', []):
                 comps_fmt.append(dict(c,
-                    planned_fmt      = self._fmt_num(c['planned_qty']) + ' ' + c['uom'],
-                    done_fmt         = self._fmt_num(c['done_qty'])    + ' ' + c['uom'],
-                    deviation_fmt    = self._fmt_dev(c['deviation_pct']),
-                    dev_color        = self._dev_color(c['deviation_pct']),
-                    unit_cost_fmt    = self._fmt_cost(c['unit_cost']),
-                    cost_planned_fmt = self._fmt_cost(c['cost_planned']),
-                    cost_done_fmt    = self._fmt_cost(c['cost_done']),
-                ))
+                                      planned_fmt=self._fmt_num(c['planned_qty']) + ' ' + c['uom'],
+                                      done_fmt=self._fmt_num(c['done_qty']) + ' ' + c['uom'],
+                                      deviation_fmt=self._fmt_dev(c['deviation_pct']),
+                                      dev_color=self._dev_color(c['deviation_pct']),
+                                      unit_cost_fmt=self._fmt_cost(c['unit_cost']),
+                                      cost_planned_fmt=self._fmt_cost(c['cost_planned']),
+                                      cost_done_fmt=self._fmt_cost(c['cost_done']),
+                                      ))
 
             # Formata ordens de serviço
             wos_fmt = []
             for w in o.get('workorders', []):
                 wos_fmt.append(dict(w,
-                    planned_hours_fmt  = '{:.2f}'.format(w['planned_hours']),
-                    real_hours_fmt     = '{:.2f}'.format(w['real_hours']),
-                    deviation_fmt      = self._fmt_dev(w['deviation_pct']),
-                    dev_color          = self._dev_color(w['deviation_pct']),
-                    cost_per_hour_fmt  = self._fmt_cost(w['cost_per_hour']),
-                    total_cost_fmt     = self._fmt_cost(w['total_cost']),
-                ))
+                                    planned_hours_fmt='{:.2f}'.format(w['planned_hours']),
+                                    real_hours_fmt='{:.2f}'.format(w['real_hours']),
+                                    deviation_fmt=self._fmt_dev(w['deviation_pct']),
+                                    dev_color=self._dev_color(w['deviation_pct']),
+                                    cost_per_hour_fmt=self._fmt_cost(w['cost_per_hour']),
+                                    total_cost_fmt=self._fmt_cost(w['total_cost']),
+                                    ))
 
             orders_fmt.append(dict(o,
-                planned_fmt   = self._fmt_num(o['planned_components_qty']),
-                done_fmt      = self._fmt_num(o['done_components_qty']),
-                deviation_fmt = self._fmt_dev(o['deviation_pct']),
-                dev_color     = dev_color,
-                status_bg     = status_bg,
-                status_color  = status_color,
-                cost_done_fmt = self._fmt_cost(o['cost_done']),
-                wo_cost_fmt   = self._fmt_cost(o['wo_cost']) if o['workorders'] else '—',
-                total_cost_fmt= self._fmt_cost(o['total_cost']),
-                components    = comps_fmt,
-                workorders    = wos_fmt,
-            ))
+                                   planned_fmt=self._fmt_num(o['planned_components_qty']),
+                                   done_fmt=self._fmt_num(o['done_components_qty']),
+                                   deviation_fmt=self._fmt_dev(o['deviation_pct']),
+                                   dev_color=dev_color,
+                                   status_bg=status_bg,
+                                   status_color=status_color,
+                                   cost_done_fmt=self._fmt_cost(o['cost_done']),
+                                   wo_cost_fmt=self._fmt_cost(o['wo_cost']) if o['workorders'] else '—',
+                                   total_cost_fmt=self._fmt_cost(o['total_cost']),
+                                   components=comps_fmt,
+                                   workorders=wos_fmt,
+                                   ))
 
-        # Top 15 componentes formatados
+        # ─── TOP 15 COMPONENTES (APENAS DO GRÁFICO) ───────
+        # A seção "Top 15 Componentes" é filtrada para incluir APENAS os componentes
+        # presentes no gráfico (chart.get('labels')). Isso mantém a coerência entre
+        # o gráfico visual e a listagem detalhada de top componentes.
         top_comps = []
         for i, label in enumerate(chart.get('labels', [])):
             top_comps.append({
-                'name':             label,
-                'ref':              (chart.get('refs') or [''] * 15)[i],
-                'uom':              chart['uoms'][i],
-                'planned_fmt':      self._fmt_num(chart['planned'][i]),
-                'done_fmt':         self._fmt_num(chart['done'][i]),
+                'name': label,
+                'ref': (chart.get('refs') or [''] * 15)[i],
+                'uom': chart['uoms'][i],
+                'planned_fmt': self._fmt_num(chart['planned'][i]),
+                'done_fmt': self._fmt_num(chart['done'][i]),
                 'cost_planned_fmt': self._fmt_cost(chart['cost_planned'][i]),
-                'cost_done_fmt':    self._fmt_cost(chart['cost_done'][i]),
+                'cost_done_fmt': self._fmt_cost(chart['cost_done'][i]),
             })
 
         # Período e filtros
@@ -458,10 +465,12 @@ class MrpProductionOverview(models.TransientModel):
         filtro_status = '' if self.state_filter == 'all' else status_labels.get(self.state_filter, '')
 
         return {
-            'periodo':        periodo,
-            'filtro_status':  filtro_status,
-            'gerado_em':      datetime.now().strftime('%d/%m/%Y %H:%M'),
-            'kpis':           kpis_fmt,
-            'orders':         orders_fmt,
+            'periodo': periodo,
+            'filtro_status': filtro_status,
+            'gerado_em': datetime.now().strftime('%d/%m/%Y %H:%M'),
+            'kpis': kpis_fmt,
+            'orders': orders_fmt,
             'top_components': top_comps,
         }
+
+
